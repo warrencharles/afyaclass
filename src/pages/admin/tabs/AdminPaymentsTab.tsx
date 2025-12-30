@@ -45,8 +45,10 @@ const AdminPaymentsTab: React.FC = () => {
     // Subscription States
     const [activeSubscriptions, setActiveSubscriptions] = useState<any[]>([]);
     const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+    const [subsSearchQuery, setSubsSearchQuery] = useState('');
 
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [logsSearchQuery, setLogsSearchQuery] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [searchingUsers, setSearchingUsers] = useState(false);
@@ -351,71 +353,81 @@ const AdminPaymentsTab: React.FC = () => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        transactions.map((t) => (
-                                            <tr key={t.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedIds.includes(t.id) ? 'bg-blue-50/50' : ''}`}>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button onClick={() => toggleSelect(t.id)} className={`transition-colors ${selectedIds.includes(t.id) ? 'text-blue-600' : 'text-slate-300 hover:text-blue-400'}`}>
-                                                        {selectedIds.includes(t.id) ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                    </button>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center">
-                                                        <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black mr-3 text-xs">
-                                                            {(t.username || '?').charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-black text-slate-800">{t.username}</div>
-                                                            <div className="text-[10px] text-slate-400 font-bold">{t.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-[10px] font-mono text-slate-400 mb-0.5">{t.orderId}</div>
-                                                    <span className="inline-flex px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-black uppercase tracking-wider">
-                                                        {(t.requestType || '').replace(/_/g, ' ')}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-black text-slate-900 leading-none">
-                                                        {Number(t.amount || 0).toLocaleString()}
-                                                    </div>
-                                                    <div className="text-[9px] text-slate-400 mt-0.5 font-black uppercase tracking-tighter">{t.currency}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ${(t.paymentStatus || '').toLowerCase() === 'completed'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : (t.paymentStatus || '').toLowerCase() === 'pending'
-                                                            ? 'bg-amber-100 text-amber-700'
-                                                            : 'bg-red-100 text-red-700'
-                                                        }`}>
-                                                        {t.paymentStatus}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {(t.paymentStatus || '').toLowerCase() !== 'completed' && (
-                                                            <button
-                                                                onClick={() => handleApproveTransaction(t)}
-                                                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-all"
-                                                                title="Approve"
-                                                            >
-                                                                <ThumbsUp size={14} />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedIds([t.id]);
-                                                                handleBulkDelete();
-                                                            }}
-                                                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={14} />
+                                        transactions
+                                            .filter(t => {
+                                                const query = logsSearchQuery.toLowerCase();
+                                                return (
+                                                    t.username?.toLowerCase().includes(query) ||
+                                                    t.email?.toLowerCase().includes(query) ||
+                                                    t.paymentStatus?.toLowerCase().includes(query) ||
+                                                    t.requestType?.toLowerCase().includes(query)
+                                                );
+                                            })
+                                            .map((t) => (
+                                                <tr key={t.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedIds.includes(t.id) ? 'bg-blue-50/50' : ''}`}>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button onClick={() => toggleSelect(t.id)} className={`transition-colors ${selectedIds.includes(t.id) ? 'text-blue-600' : 'text-slate-300 hover:text-blue-400'}`}>
+                                                            {selectedIds.includes(t.id) ? <CheckSquare size={18} /> : <Square size={18} />}
                                                         </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center">
+                                                            <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black mr-3 text-xs">
+                                                                {(t.username || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-black text-slate-800">{t.username}</div>
+                                                                <div className="text-[10px] text-slate-400 font-bold">{t.email}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-[10px] font-mono text-slate-400 mb-0.5">{t.orderId}</div>
+                                                        <span className="inline-flex px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-black uppercase tracking-wider">
+                                                            {(t.requestType || '').replace(/_/g, ' ')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-sm font-black text-slate-900 leading-none">
+                                                            {Number(t.amount || 0).toLocaleString()}
+                                                        </div>
+                                                        <div className="text-[9px] text-slate-400 mt-0.5 font-black uppercase tracking-tighter">{t.currency}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ${(t.paymentStatus || '').toLowerCase() === 'completed'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : (t.paymentStatus || '').toLowerCase() === 'pending'
+                                                                ? 'bg-amber-100 text-amber-700'
+                                                                : 'bg-red-100 text-red-700'
+                                                            }`}>
+                                                            {t.paymentStatus}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {(t.paymentStatus || '').toLowerCase() !== 'completed' && (
+                                                                <button
+                                                                    onClick={() => handleApproveTransaction(t)}
+                                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                                    title="Approve"
+                                                                >
+                                                                    <ThumbsUp size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedIds([t.id]);
+                                                                    handleBulkDelete();
+                                                                }}
+                                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
                                     )}
                                 </tbody>
                             </table>
@@ -481,24 +493,35 @@ const AdminPaymentsTab: React.FC = () => {
             {activeSubTab === 'subscriptions' && (
                 <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/50 shadow-sm">
-                        <div>
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                        <div className="flex-1 w-full sm:w-auto">
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2 mb-1">
                                 <Zap className="text-amber-500 fill-amber-500" />
                                 Active Subscriptions
                             </h2>
-                            <p className="text-sm text-slate-500 font-bold mt-1">Manage currently active student access rights.</p>
+                            <div className="relative max-w-md w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search by username, email or phone..."
+                                    value={subsSearchQuery}
+                                    onChange={(e) => setSubsSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-white/80 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                                />
+                            </div>
                         </div>
-                        <div className="bg-white/80 px-4 py-2 rounded-xl border border-blue-100 shadow-sm">
-                            <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Active</div>
-                            <div className="text-xl font-black text-blue-600">{activeSubscriptions.length} Users</div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={loadSubscriptions}
+                                className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all shadow-sm active:scale-95"
+                                title="Refresh"
+                            >
+                                <RefreshCw size={20} className={loadingSubscriptions ? 'animate-spin' : ''} />
+                            </button>
+                            <div className="bg-white/80 px-4 py-2 rounded-xl border border-blue-100 shadow-sm">
+                                <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Active</div>
+                                <div className="text-xl font-black text-blue-600">{activeSubscriptions.length} Users</div>
+                            </div>
                         </div>
-                        <button
-                            onClick={loadSubscriptions}
-                            className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all shadow-sm active:scale-95"
-                            title="Refresh"
-                        >
-                            <RefreshCw size={20} className={loadingSubscriptions ? 'animate-spin' : ''} />
-                        </button>
                     </div>
 
                     <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 overflow-hidden transform transition-all p-2">
@@ -529,90 +552,107 @@ const AdminPaymentsTab: React.FC = () => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        activeSubscriptions.map((sub: any) => {
-                                            const expiry = new Date(sub.materialPaidAccessEndTime);
-                                            const now = new Date();
-                                            const diffTime = expiry.getTime() - now.getTime();
-                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                            const isExpiringSoon = diffDays <= 3 && diffDays > 0;
+                                        activeSubscriptions
+                                            .filter(sub => {
+                                                const query = subsSearchQuery.toLowerCase();
+                                                return (
+                                                    sub.username?.toLowerCase().includes(query) ||
+                                                    sub.email?.toLowerCase().includes(query) ||
+                                                    sub.phone?.toLowerCase().includes(query)
+                                                );
+                                            })
+                                            .map((sub: any) => {
+                                                const expiry = new Date(sub.materialPaidAccessEndTime);
+                                                const now = new Date();
+                                                const diffTime = expiry.getTime() - now.getTime();
+                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                const isExpiringSoon = diffDays <= 3 && diffDays > 0;
 
-                                            // Handle invalid dates nicely
-                                            const isValidDate = !isNaN(expiry.getTime());
+                                                // Handle invalid dates nicely
+                                                const isValidDate = !isNaN(expiry.getTime());
 
-                                            return (
-                                                <tr key={sub.id} className="hover:bg-blue-50/40 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center space-x-3">
-                                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-black shadow-sm">
-                                                                {(sub.username || '?').charAt(0).toUpperCase()}
+                                                return (
+                                                    <tr key={sub.id} className="hover:bg-blue-50/40 transition-colors group">
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center space-x-3">
+                                                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-black shadow-sm">
+                                                                    {(sub.username || '?').charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-sm font-black text-slate-800">{sub.username}</div>
+                                                                    <div className="text-[10px] text-slate-400 font-bold">{sub.email}</div>
+                                                                    <div className="text-[9px] text-slate-300 font-bold">{sub.phone}</div>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <div className="text-sm font-black text-slate-800">{sub.username}</div>
-                                                                <div className="text-[10px] text-slate-400 font-bold">{sub.email}</div>
-                                                                <div className="text-[9px] text-slate-300 font-bold">{sub.phone}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {sub.subscriptionStartDate ? (
-                                                            <div className="flex items-center text-slate-600">
-                                                                <Calendar size={12} className="mr-1.5 text-slate-400" />
-                                                                <span className="text-xs font-bold">{new Date(sub.subscriptionStartDate).toLocaleDateString()}</span>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[10px] text-slate-300 font-bold italic">Unknown</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {isValidDate ? (
-                                                            <div className="flex items-center text-slate-700">
-                                                                <Clock size={12} className={`mr-1.5 ${isExpiringSoon ? 'text-amber-500' : 'text-slate-400'}`} />
-                                                                <span className="text-xs font-bold">{expiry.toLocaleDateString()} <span className="text-[10px] text-slate-400 ml-1">{expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-red-500 font-bold">Invalid Date</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        {isValidDate && diffDays > 0 ? (
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isExpiringSoon ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                                                {diffDays} Days
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700">Expired</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex items-center justify-end space-x-2">
-                                                            <div className="flex bg-slate-100 rounded-lg p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {sub.subscriptionStartDate ? (
+                                                                <div className="flex items-center text-slate-600">
+                                                                    <Calendar size={12} className="mr-1.5 text-slate-400" />
+                                                                    <span className="text-xs font-bold">{new Date(sub.subscriptionStartDate).toLocaleDateString()}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-300 font-bold italic">Unknown</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {isValidDate ? (
+                                                                <div className="flex items-center text-slate-700">
+                                                                    <Clock size={12} className={`mr-1.5 ${isExpiringSoon ? 'text-amber-500' : 'text-slate-400'}`} />
+                                                                    <span className="text-xs font-bold">{expiry.toLocaleDateString()} <span className="text-[10px] text-slate-400 ml-1">{expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-red-500 font-bold">Invalid Date</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            {isValidDate && diffDays > 0 ? (
+                                                                <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isExpiringSoon ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                                                    {diffDays} Days
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700">Expired</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end space-x-2">
+                                                                <div className="flex bg-slate-100 rounded-lg p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 1)}
+                                                                        className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
+                                                                        title="Extend 1 Day"
+                                                                    >
+                                                                        +1d
+                                                                    </button>
+                                                                    <div className="w-px bg-slate-200 mx-1"></div>
+                                                                    <button
+                                                                        onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 7)}
+                                                                        className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
+                                                                        title="Extend 7 Days"
+                                                                    >
+                                                                        +7d
+                                                                    </button>
+                                                                    <div className="w-px bg-slate-200 mx-1"></div>
+                                                                    <button
+                                                                        onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 30)}
+                                                                        className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
+                                                                        title="Extend 30 Days"
+                                                                    >
+                                                                        +30d
+                                                                    </button>
+                                                                </div>
                                                                 <button
-                                                                    onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 7)}
-                                                                    className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
-                                                                    title="Extend 7 Days"
+                                                                    onClick={() => handleManageSubscription(sub.id, sub.username, 'revoke')}
+                                                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Revoke Susbscription"
                                                                 >
-                                                                    +7d
-                                                                </button>
-                                                                <div className="w-px bg-slate-200 mx-1"></div>
-                                                                <button
-                                                                    onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 30)}
-                                                                    className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
-                                                                    title="Extend 30 Days"
-                                                                >
-                                                                    +30d
+                                                                    <XCircle size={18} />
                                                                 </button>
                                                             </div>
-                                                            <button
-                                                                onClick={() => handleManageSubscription(sub.id, sub.username, 'revoke')}
-                                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                                title="Revoke Susbscription"
-                                                            >
-                                                                <XCircle size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })
                                     )}
                                 </tbody>
                             </table>
