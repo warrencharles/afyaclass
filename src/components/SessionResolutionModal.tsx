@@ -20,41 +20,40 @@ const SessionResolutionModal: React.FC<SessionResolutionModalProps> = ({ isOpen,
   if (!isOpen || !sessionConflictDetails) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} title="Account in Use">
-      <div className="p-4">
-        <p className="text-gray-700 mb-4">
-          {sessionConflictDetails.message || 'This account is already logged in on another device.'}
+    <Modal isOpen={isOpen} onClose={onCancel} title="Account Active Elsewhere" size="sm">
+      <div className="p-3 bg-white">
+        <p className="text-sm text-gray-600 mb-3">
+          Your account is currently active on another device.
         </p>
 
         {sessionConflictDetails.activeSessions && sessionConflictDetails.activeSessions.length > 0 && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-            <h4 className="font-semibold text-gray-800 mb-2">Active Sessions:</h4>
-            <ul className="list-disc list-inside text-sm text-gray-600">
+          <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-100">
+            <h4 className="font-medium text-gray-700 text-xs mb-1">Active Session:</h4>
+            <ul className="text-xs text-gray-500 max-h-24 overflow-y-auto space-y-1 custom-scrollbar">
               {sessionConflictDetails.activeSessions.map((session, index) => (
-                <li key={index} className="mb-1">
-                  Device: {session.device_info || 'Unknown Device'} (Logged in: {new Date(session.login_time).toLocaleString()})
+                <li key={index} className="flex items-start gap-1">
+                  <span className="w-1 h-1 bg-amber-500 rounded-full mt-1.5 flex-shrink-0" />
+                  <span className="break-all">
+                    {session.device_info} <span className="text-gray-400">({new Date(session.login_time).toLocaleString()})</span>
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <p className="text-gray-700 mb-4">
-          Do you want to terminate all other active sessions and log in here, or cancel this login attempt?
-        </p>
-
-        <div className="flex justify-end space-x-4">
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end mt-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded border border-gray-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onTerminateAll}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded shadow-sm transition-all"
           >
-            Terminate All Other Sessions & Log In
+            Terminate Others & Log In
           </button>
         </div>
       </div>
