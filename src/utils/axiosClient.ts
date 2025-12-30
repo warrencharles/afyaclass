@@ -3,7 +3,7 @@ import axios from "axios";
 import { getAuthToken, getDeviceId } from "./authStorage"; // Import getDeviceId
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://dev.afyaclass.co.tz/backend-php/public",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://afyaclass.co.tz/backend-php/public",
   withCredentials: false,
   headers: { "Content-Type": "application/json" },
 });

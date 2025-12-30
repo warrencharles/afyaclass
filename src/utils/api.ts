@@ -2,7 +2,7 @@ import axios from 'axios';
 import axiosClient from './axiosClient'; // Import the new axiosClient
 import { Class, ClassLevel, UserQuery, ChatMessage, ChatConversation, Advertisement } from '../types'; // Corrected import path for types
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://dev.afyaclass.co.tz/backend-php/public"; // Use VITE_API_BASE_URL
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://afyaclass.co.tz/backend-php/public"; // Use VITE_API_BASE_URL
 
 // Remove setAuthToken and setSessionInvalidatedCallback as they are handled by axiosClient interceptors and AuthContext
 // Remove the interceptor here as it's now in axiosClient.ts

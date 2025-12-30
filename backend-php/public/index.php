@@ -68,14 +68,10 @@ set_exception_handler(function ($exception) use ($appEnv) {
 
 // Set CORS headers for all requests
 $allowedOrigins = [
-    'https://afyaclass.co.tz',
-    'https://www.afyaclass.co.tz',
-    'http://afyaclass.co.tz',
-    'http://www.afyaclass.co.tz',
-    'https://dev.afyaclass.co.tz',
-    'http://dev.afyaclass.co.tz',
     'http://localhost:5173',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'https://afyaclass.co.tz',
+    'http://afyaclass.co.tz'
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';

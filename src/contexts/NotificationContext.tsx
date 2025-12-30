@@ -48,7 +48,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://dev.afyaclass.co.tz/backend-php/public';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://afyaclass.co.tz/backend-php/public';
 
   const fetchNotifications = useCallback(async (currentUserId: number | undefined, currentIsAuthenticated: boolean) => {
     if (!currentIsAuthenticated || !currentUserId) {
