@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axiosClient from '../../../utils/api';
 import {
     fetchPesapalTransactions,
     bulkDeletePesapalTransactions,
@@ -78,12 +77,81 @@ const AdminPaymentsTab: React.FC = () => {
     });
 
     useEffect(() => {
+        setSelectedIds([]); // Reset selection on tab change
         if (activeSubTab === 'automatic') {
             loadTransactions();
         } else if (activeSubTab === 'subscriptions') {
             loadSubscriptions();
         }
     }, [activeSubTab]);
+
+    const handleBulkRevoke = () => {
+        if (selectedIds.length === 0) return;
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Bulk Revoke Access',
+            message: `Are you sure you want to revoke access for ${selectedIds.length} users?`,
+            variant: 'danger',
+            onConfirm: async () => {
+                setGrantingAccess(true);
+                try {
+                    // Execute sequentially to avoid race conditions/overload
+                    for (const id of selectedIds) {
+                        const sub = activeSubscriptions.find(s => s.id === id);
+                        if (sub) {
+                            await manageSubscription({ userId: id, action: 'revoke' });
+                        }
+                    }
+                    showToast('Access revoked for selected users', 'success');
+                    setSelectedIds([]);
+                    loadSubscriptions();
+                } catch (err) {
+                    showToast('Failed to revoke some subscriptions', 'error');
+                } finally {
+                    setGrantingAccess(false);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
+    };
+
+    const handleBulkApprove = () => {
+        if (selectedIds.length === 0) return;
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Bulk Approve Payments',
+            message: `Approve ${selectedIds.length} selected transactions? This will grant access based on their request type.`,
+            variant: 'success',
+            onConfirm: async () => {
+                setGrantingAccess(true);
+                try {
+                    for (const id of selectedIds) {
+                        const txn = transactions.find(t => t.id === id);
+                        if (txn && txn.paymentStatus.toLowerCase() !== 'completed') {
+                            let duration = 7;
+                            if (txn.requestType.includes('monthly')) duration = 30;
+                            await manualGrantAccess({
+                                userId: txn.userId,
+                                requestType: txn.requestType,
+                                durationDays: duration
+                            });
+                        }
+                    }
+                    showToast('Selected transactions approved', 'success');
+                    setSelectedIds([]);
+                    loadTransactions();
+                    loadSubscriptions(); // Refresh active subs too
+                } catch (err) {
+                    showToast('Failed to approve some transactions', 'error');
+                } finally {
+                    setGrantingAccess(false);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
+    };
 
     const loadSubscriptions = async () => {
         setLoadingSubscriptions(true);
@@ -161,6 +229,7 @@ const AdminPaymentsTab: React.FC = () => {
                     });
                     showToast('Access granted successfully', 'success');
                     loadTransactions();
+                    loadSubscriptions(); // Refresh active subs list
                 } catch (err) {
                     showToast('Failed to grant access', 'error');
                 } finally {
@@ -298,13 +367,22 @@ const AdminPaymentsTab: React.FC = () => {
                             <h2 className="sm:hidden text-lg font-black text-slate-800">History</h2>
                             <div className="flex items-center space-x-2">
                                 {selectedIds.length > 0 && (
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        className="flex items-center space-x-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl border border-red-100 transition-all font-black text-[10px] md:text-xs"
-                                    >
-                                        <Trash2 size={14} />
-                                        <span>Delete ({selectedIds.length})</span>
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={handleBulkApprove}
+                                            className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl border border-green-100 transition-all font-black text-[10px] md:text-xs mr-2"
+                                        >
+                                            <ThumbsUp size={14} />
+                                            <span>Approve ({selectedIds.length})</span>
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center space-x-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl border border-red-100 transition-all font-black text-[10px] md:text-xs"
+                                        >
+                                            <Trash2 size={14} />
+                                            <span>Delete ({selectedIds.length})</span>
+                                        </button>
+                                    </>
                                 )}
                                 <button
                                     onClick={loadTransactions}
@@ -510,9 +588,18 @@ const AdminPaymentsTab: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
+                            {selectedIds.length > 0 && (
+                                <button
+                                    onClick={handleBulkRevoke}
+                                    className="flex items-center space-x-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl border border-red-100 transition-all font-black text-[10px] md:text-xs"
+                                >
+                                    <XCircle size={14} />
+                                    <span>Revoke ({selectedIds.length})</span>
+                                </button>
+                            )}
                             <button
                                 onClick={loadSubscriptions}
-                                className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all shadow-sm active:scale-95"
+                                className="order-first sm:order-none p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all shadow-sm active:scale-95"
                                 title="Refresh"
                             >
                                 <RefreshCw size={20} className={loadingSubscriptions ? 'animate-spin' : ''} />
@@ -529,6 +616,14 @@ const AdminPaymentsTab: React.FC = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-100/50">
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-12">
+                                            <button
+                                                onClick={() => setSelectedIds(selectedIds.length === activeSubscriptions.length ? [] : activeSubscriptions.map(s => s.id))}
+                                                className="text-slate-400 hover:text-blue-600 transition-colors"
+                                            >
+                                                {selectedIds.length > 0 && selectedIds.length === activeSubscriptions.length ? <CheckSquare size={18} /> : <Square size={18} />}
+                                            </button>
+                                        </th>
                                         <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student</th>
                                         <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subscription Start</th>
                                         <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires On</th>
@@ -539,14 +634,14 @@ const AdminPaymentsTab: React.FC = () => {
                                 <tbody className="divide-y divide-slate-50">
                                     {loadingSubscriptions ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                            <td colSpan={6} className="px-6 py-20 text-center">
                                                 <Loader2 className="animate-spin h-8 w-8 text-blue-500 mx-auto mb-2" />
                                                 <p className="text-slate-500 font-bold text-sm">Loading subscriptions...</p>
                                             </td>
                                         </tr>
                                     ) : activeSubscriptions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                            <td colSpan={6} className="px-6 py-20 text-center">
                                                 <ShieldPlus size={40} className="mx-auto text-slate-200 mb-4" />
                                                 <p className="text-slate-500 font-black uppercase tracking-widest">No active subscriptions found</p>
                                             </td>
@@ -572,7 +667,12 @@ const AdminPaymentsTab: React.FC = () => {
                                                 const isValidDate = !isNaN(expiry.getTime());
 
                                                 return (
-                                                    <tr key={sub.id} className="hover:bg-blue-50/40 transition-colors group">
+                                                    <tr key={sub.id} className={`hover:bg-blue-50/40 transition-colors group ${selectedIds.includes(sub.id) ? 'bg-blue-50/20' : ''}`}>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <button onClick={() => toggleSelect(sub.id)} className={`transition-colors ${selectedIds.includes(sub.id) ? 'text-blue-600' : 'text-slate-300 hover:text-blue-400'}`}>
+                                                                {selectedIds.includes(sub.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                            </button>
+                                                        </td>
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center space-x-3">
                                                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-black shadow-sm">
