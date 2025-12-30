@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Mobile App
+mobile/
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment variables
+.env
+
+# Build outputs
+dist/
+build/
+.output/
+
+# OS/System
+.DS_Store
+Thumbs.db

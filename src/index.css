@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #ebf5fc;
+  /* Classic Soft Blue-Grey Base */
+  color: #4a5568;
+}
+
+/* 
+   ==========================================================================
+   BOLD NEUMORPHIC DESIGN SYSTEM v2.0
+   ==========================================================================
+   Base Color: #ebf5fc
+   Light Shadow: #ffffff
+   Dark Shadow: #a3b1c6
+*/
+
+@layer utilities {
+
+  /* --- 1. CORE SURFACES --- */
+
+  /* The standard "extruded" float - Good for Cards, Sections */
+  .neu-flat {
+    background: #ebf5fc;
+    box-shadow:
+      6px 6px 12px #b8b9be,
+      -6px -6px 12px #ffffff;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  /* The "pressed" indent - Good for Backgrounds, Inputs, Active States */
+  .neu-pressed {
+    background: #ebf5fc;
+    box-shadow:
+      inset 6px 6px 12px #b8b9be,
+      inset -6px -6px 12px #ffffff;
+    border-radius: 20px;
+    border: none;
+  }
+
+  /* Convex - Bulges out spherically (Bubbles, floating icons) */
+  .neu-convex {
+    background: linear-gradient(145deg, #ffffff, #d3dde3);
+    box-shadow:
+      8px 8px 16px #a3b1c6,
+      -8px -8px 16px #ffffff;
+    border-radius: 50%;
+  }
+
+  /* Concave - Dips in (Buttons, detailed cards) */
+  .neu-concave {
+    background: linear-gradient(145deg, #d3dde3, #ffffff);
+    box-shadow:
+      8px 8px 16px #a3b1c6,
+      -8px -8px 16px #ffffff;
+    border-radius: 20px;
+  }
+
+  /* --- 2. INTERACTIVE ELEMENTS --- */
+
+  /* Primary Action Button - Strong 3D Pop */
+  .neu-btn-primary {
+    background: linear-gradient(145deg, #4f46e5, #6366f1);
+    box-shadow:
+      8px 8px 16px #a3b1c6,
+      -8px -8px 16px #ffffff,
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    /* Bevel highlight */
+    color: white;
+    font-weight: 700;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    position: relative;
+    z-index: 10;
+  }
+
+  .neu-btn-primary:hover {
+    box-shadow:
+      10px 10px 20px #9daec6,
+      -10px -10px 20px #ffffff;
+    transform: translateY(-2px);
+  }
+
+  .neu-btn-primary:active {
+    box-shadow:
+      inset 4px 4px 8px rgba(0, 0, 0, 0.2),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.1);
+    transform: translateY(2px);
+  }
+
+  /* Secondary Action Button - Deep Extruded */
+  .neu-btn-secondary {
+    background: #ebf5fc;
+    box-shadow:
+      8px 8px 16px #a3b1c6,
+      -8px -8px 16px #ffffff;
+    color: #4f46e5;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+  }
+
+  .neu-btn-secondary:hover {
+    box-shadow:
+      10px 10px 20px #9daec6,
+      -10px -10px 20px #ffffff;
+    transform: translateY(-2px);
+    color: #4338ca;
+  }
+
+  .neu-btn-secondary:active {
+    background: #ebf5fc;
+    box-shadow:
+      inset 4px 4px 8px #b8b9be,
+      inset -4px -4px 8px #ffffff;
+    transform: translateY(1px);
+  }
+
+  /* Icon Button (Circular) */
+  .neu-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #ebf5fc;
+    box-shadow:
+      6px 6px 10px #b8b9be,
+      -6px -6px 10px #ffffff;
+    color: #64748b;
+    transition: all 0.3s ease;
+  }
+
+  .neu-icon-btn:hover {
+    color: #4f46e5;
+    transform: translateY(-2px);
+  }
+
+  .neu-icon-btn:active {
+    box-shadow:
+      inset 3px 3px 6px #b8b9be,
+      inset -3px -3px 6px #ffffff;
+    transform: translateY(0);
+  }
+
+  /* --- 3. TEXT & TYPOGRAPHY --- */
+
+  /* Stamped Text Effect (Debossed) */
+  .text-neu-stamped {
+    color: #ebf5fc;
+    text-shadow:
+      2px 2px 4px #a3b1c6,
+      -2px -2px 4px #ffffff;
+    font-weight: 900;
+  }
+
+  /* Pop-out Text Effect (Embossed) */
+  .text-neu-pop {
+    color: #4a5568;
+    text-shadow:
+      2px 2px 4px rgba(163, 177, 198, 0.4),
+      -2px -2px 4px rgba(255, 255, 255, 0.8);
+  }
+
+  /* --- 4. 3D & ANIMATIONS --- */
+
+  .neu-float {
+    animation: neu-float 6s ease-in-out infinite;
+  }
+
+  @keyframes neu-float {
+
+    0%,
+    100% {
+      transform: translateY(0) rotateX(10deg) rotateY(10deg);
+    }
+
+    50% {
+      transform: translateY(-20px) rotateX(-5deg) rotateY(-5deg);
+    }
+  }
+
+  /* Card Hover Tilt */
+  .neu-tilt {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+  }
+
+  .neu-tilt:hover {
+    transform: perspective(1000px) rotateX(5deg) rotateY(5deg) scale(1.02);
+  }
+
+  /* Scrollbar Customization */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #ebf5fc;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #bdcad9;
+    border-radius: 20px;
+    border: 3px solid #ebf5fc;
+  }
+}
