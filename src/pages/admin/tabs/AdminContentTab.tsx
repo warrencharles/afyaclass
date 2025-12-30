@@ -538,7 +538,7 @@ export const AdminContentTab: React.FC = () => {
                 className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
               />
             </div>
-            <div className="p-4 pl-12 border-b border-slate-50 bg-slate-50/30 flex justify-between items-start">
+            <div className="p-4 pl-12 border-b border-slate-50 flex justify-between items-start">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-white rounded-xl shadow-sm">
                   {getContentTypeIcon(content.type)}
@@ -551,10 +551,10 @@ export const AdminContentTab: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-1">
-                <button onClick={() => handleViewEdit(content)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="View"><Eye size={16} /></button>
-                <button onClick={() => toggleEditForm(content)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Edit"><Edit size={16} /></button>
-                <button onClick={() => triggerDelete(content)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>
+              <div className="flex gap-1 relative z-20">
+                <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-100" title="View"><Eye size={18} /></button>
+                <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all opacity-100" title="Edit"><Edit size={18} /></button>
+                <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-100" title="Delete"><Trash2 size={18} /></button>
               </div>
             </div>
             <CardContent className="p-5">

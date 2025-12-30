@@ -90,7 +90,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-6 select-none print:hidden"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden"
       onContextMenu={(e) => e.preventDefault()}
     >
       <style>{`
