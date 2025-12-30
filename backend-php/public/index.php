@@ -306,6 +306,12 @@ try {
         case '/admin/manual-grant':
             handle_admin_manual_grant($requestMethod);
             break;
+        case '/admin/subscriptions':
+            handle_admin_active_subscriptions($requestMethod);
+            break;
+        case '/admin/subscriptions/manage':
+            handle_admin_manage_subscription($requestMethod);
+            break;
         case '/users/start-material-trial':
             handle_start_material_trial($requestMethod);
             break;

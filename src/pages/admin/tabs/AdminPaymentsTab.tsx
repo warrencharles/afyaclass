@@ -4,11 +4,13 @@ import {
     fetchPesapalTransactions,
     bulkDeletePesapalTransactions,
     manualGrantAccess,
-    searchUsersForGrant
+    searchUsersForGrant,
+    fetchActiveSubscriptions,
+    manageSubscription
 } from '../../../utils/api';
 import { AdminPaymentRequestsTab } from './AdminPaymentRequestsTab';
 import { useToast } from '../../../contexts/ToastContext';
-import { Search, History, ShieldPlus, Trash2, Clock, CheckCircle, XCircle, AlertCircle, Loader2, CheckSquare, Square, ThumbsUp, Image as ImageIcon, User, Mail, DollarSign } from 'lucide-react';
+import { Search, History, ShieldPlus, Trash2, Clock, CheckCircle, XCircle, AlertCircle, Loader2, CheckSquare, Square, ThumbsUp, Image as ImageIcon, User, Mail, DollarSign, Calendar, Zap, RefreshCw } from 'lucide-react';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Select } from '../../../components/ui/Select';
 import { Button } from '../../../components/ui/Button';
@@ -36,9 +38,14 @@ interface UserSearchResult {
 }
 
 const AdminPaymentsTab: React.FC = () => {
-    const [activeSubTab, setActiveSubTab] = useState<'proofs' | 'automatic' | 'manual'>('proofs');
+    const [activeSubTab, setActiveSubTab] = useState<'proofs' | 'automatic' | 'manual' | 'subscriptions'>('subscriptions');
     const [transactions, setTransactions] = useState<PesapalTransaction[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
+
+    // Subscription States
+    const [activeSubscriptions, setActiveSubscriptions] = useState<any[]>([]);
+    const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -71,8 +78,23 @@ const AdminPaymentsTab: React.FC = () => {
     useEffect(() => {
         if (activeSubTab === 'automatic') {
             loadTransactions();
+        } else if (activeSubTab === 'subscriptions') {
+            loadSubscriptions();
         }
     }, [activeSubTab]);
+
+    const loadSubscriptions = async () => {
+        setLoadingSubscriptions(true);
+        try {
+            const data = await fetchActiveSubscriptions();
+            setActiveSubscriptions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Failed to load subscriptions:', err);
+            showToast('Failed to load active subscriptions', 'error');
+        } finally {
+            setLoadingSubscriptions(false);
+        }
+    };
 
     const loadTransactions = async () => {
         setLoadingTransactions(true);
@@ -201,6 +223,34 @@ const AdminPaymentsTab: React.FC = () => {
         setSearchQuery('');
     };
 
+    const handleManageSubscription = (userId: number, username: string, action: 'extend' | 'revoke', value?: number) => {
+        const actionText = action === 'revoke' ? 'Revoke Access' : 'Extend Subscription';
+        const modalVariant = action === 'revoke' ? 'danger' : 'success';
+        const message = action === 'revoke'
+            ? `Are you sure you want to immediately REVOKE access for ${username}? The user will lose access instantly.`
+            : `Extend subscription for ${username} by ${value} days?`;
+
+        setConfirmModal({
+            isOpen: true,
+            title: actionText,
+            message: message,
+            variant: modalVariant,
+            onConfirm: async () => {
+                setGrantingAccess(true); // Re-use granting loader
+                try {
+                    await manageSubscription({ userId, action, value });
+                    showToast(`Subscription ${action === 'revoke' ? 'revoked' : 'extended'} successfully!`, 'success');
+                    loadSubscriptions(); // Refresh list
+                } catch (err: any) {
+                    showToast(err.response?.data?.message || 'Action failed', 'error');
+                } finally {
+                    setGrantingAccess(false);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
+    };
+
     return (
         <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
             {/* Sub-navigation - Responsive sizing */}
@@ -208,6 +258,7 @@ const AdminPaymentsTab: React.FC = () => {
                 {[
                     { id: 'proofs', label: 'Proofs', icon: ImageIcon },
                     { id: 'automatic', label: 'Auto Logs', icon: History },
+                    { id: 'subscriptions', label: 'Active Subs', icon: Zap },
                     { id: 'manual', label: 'Grant', icon: ShieldPlus }
                 ].map(tab => (
                     <button
@@ -421,6 +472,150 @@ const AdminPaymentsTab: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {activeSubTab === 'subscriptions' && (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/50 shadow-sm">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                <Zap className="text-amber-500 fill-amber-500" />
+                                Active Subscriptions
+                            </h2>
+                            <p className="text-sm text-slate-500 font-bold mt-1">Manage currently active student access rights.</p>
+                        </div>
+                        <div className="bg-white/80 px-4 py-2 rounded-xl border border-blue-100 shadow-sm">
+                            <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Active</div>
+                            <div className="text-xl font-black text-blue-600">{activeSubscriptions.length} Users</div>
+                        </div>
+                        <button
+                            onClick={loadSubscriptions}
+                            className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all shadow-sm active:scale-95"
+                            title="Refresh"
+                        >
+                            <RefreshCw size={20} className={loadingSubscriptions ? 'animate-spin' : ''} />
+                        </button>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 overflow-hidden transform transition-all p-2">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-100/50">
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subscription Start</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires On</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Remaining</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {loadingSubscriptions ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                                <Loader2 className="animate-spin h-8 w-8 text-blue-500 mx-auto mb-2" />
+                                                <p className="text-slate-500 font-bold text-sm">Loading subscriptions...</p>
+                                            </td>
+                                        </tr>
+                                    ) : activeSubscriptions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                                <ShieldPlus size={40} className="mx-auto text-slate-200 mb-4" />
+                                                <p className="text-slate-500 font-black uppercase tracking-widest">No active subscriptions found</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        activeSubscriptions.map((sub: any) => {
+                                            const expiry = new Date(sub.materialPaidAccessEndTime);
+                                            const now = new Date();
+                                            const diffTime = expiry.getTime() - now.getTime();
+                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                            const isExpiringSoon = diffDays <= 3 && diffDays > 0;
+
+                                            // Handle invalid dates nicely
+                                            const isValidDate = !isNaN(expiry.getTime());
+
+                                            return (
+                                                <tr key={sub.id} className="hover:bg-blue-50/40 transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-black shadow-sm">
+                                                                {(sub.username || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-black text-slate-800">{sub.username}</div>
+                                                                <div className="text-[10px] text-slate-400 font-bold">{sub.email}</div>
+                                                                <div className="text-[9px] text-slate-300 font-bold">{sub.phone}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {sub.subscriptionStartDate ? (
+                                                            <div className="flex items-center text-slate-600">
+                                                                <Calendar size={12} className="mr-1.5 text-slate-400" />
+                                                                <span className="text-xs font-bold">{new Date(sub.subscriptionStartDate).toLocaleDateString()}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] text-slate-300 font-bold italic">Unknown</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {isValidDate ? (
+                                                            <div className="flex items-center text-slate-700">
+                                                                <Clock size={12} className={`mr-1.5 ${isExpiringSoon ? 'text-amber-500' : 'text-slate-400'}`} />
+                                                                <span className="text-xs font-bold">{expiry.toLocaleDateString()} <span className="text-[10px] text-slate-400 ml-1">{expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-red-500 font-bold">Invalid Date</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {isValidDate && diffDays > 0 ? (
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isExpiringSoon ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                                                {diffDays} Days
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700">Expired</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end space-x-2">
+                                                            <div className="flex bg-slate-100 rounded-lg p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 7)}
+                                                                    className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
+                                                                    title="Extend 7 Days"
+                                                                >
+                                                                    +7d
+                                                                </button>
+                                                                <div className="w-px bg-slate-200 mx-1"></div>
+                                                                <button
+                                                                    onClick={() => handleManageSubscription(sub.id, sub.username, 'extend', 30)}
+                                                                    className="px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 rounded-md transition-all shadow-sm hover:shadow"
+                                                                    title="Extend 30 Days"
+                                                                >
+                                                                    +30d
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleManageSubscription(sub.id, sub.username, 'revoke')}
+                                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Revoke Susbscription"
+                                                            >
+                                                                <XCircle size={18} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

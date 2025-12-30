@@ -212,4 +212,15 @@ export const searchUsersForGrant = async (query: string) => {
   return response.data;
 };
 
+// Subscription Management
+export const fetchActiveSubscriptions = async () => {
+  const response = await axiosClient.get('/admin/subscriptions');
+  return response.data;
+};
+
+export const manageSubscription = async (data: { userId: number; action: 'extend' | 'revoke'; value?: number }) => {
+  const response = await axiosClient.post('/admin/subscriptions/manage', data);
+  return response.data;
+};
+
 export default axiosClient; // Export the new axiosClient as default

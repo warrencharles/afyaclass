@@ -264,4 +264,147 @@ function handle_admin_manual_grant($requestMethod)
         http_response_code(405);
         echo json_encode(['message' => 'Method Not Allowed']);
     }
+
+}
+
+function handle_admin_active_subscriptions($requestMethod)
+{
+    global $pdo;
+
+    if ($requestMethod === 'GET') {
+        try {
+            // Fetch users who currently have material access
+            // We also try to get the latest payment date as 'subscriptionStart'
+            $sql = "
+                SELECT 
+                    u.id, u.username, u.email, u.phone, u.college, 
+                    u.hasMaterialAccess, u.materialPaidAccessEndTime, u.materialTrialEndTime,
+                    (
+                        SELECT MAX(createdAt) 
+                        FROM payment_requests 
+                        WHERE userId = u.id AND status = 'approved'
+                    ) as latestPaymentDate,
+                    (
+                        SELECT MAX(createdAt)
+                        FROM pesapal_transactions
+                        WHERE userId = u.id AND paymentStatus = 'COMPLETED'
+                    ) as latestPesapalDate
+                FROM users u 
+                WHERE u.hasMaterialAccess = 1
+                ORDER BY u.materialPaidAccessEndTime ASC
+            ";
+
+            $stmt = $pdo->query($sql);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Process to determine effective start date
+            foreach ($users as &$user) {
+                // Determine start date (latest of payment or pesapal)
+                $payDate = $user['latestPaymentDate'];
+                $pesapalDate = $user['latestPesapalDate'];
+
+                if ($payDate && $pesapalDate) {
+                    $user['subscriptionStartDate'] = ($payDate > $pesapalDate) ? $payDate : $pesapalDate;
+                } elseif ($payDate) {
+                    $user['subscriptionStartDate'] = $payDate;
+                } elseif ($pesapalDate) {
+                    $user['subscriptionStartDate'] = $pesapalDate;
+                } else {
+                    // Fallback to trial start or unknown
+                    $user['subscriptionStartDate'] = null;
+                }
+            }
+
+            http_response_code(200);
+            echo json_encode($users);
+        } catch (PDOException $e) {
+            error_log("Admin fetch active subscriptions error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['message' => 'Failed to fetch active subscriptions.', 'details' => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['message' => 'Method Not Allowed']);
+    }
+}
+
+function handle_admin_manage_subscription($requestMethod)
+{
+    global $pdo;
+
+    if ($requestMethod === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $userId = $data['userId'] ?? null;
+        $action = $data['action'] ?? ''; // 'extend' or 'revoke'
+        $value = $data['value'] ?? 0; // Days to extend
+
+        if (!$userId || !$action) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Missing required fields.']);
+            return;
+        }
+
+        try {
+            $userStmt = $pdo->prepare("SELECT materialPaidAccessEndTime, hasMaterialAccess FROM users WHERE id = ?");
+            $userStmt->execute([$userId]);
+            $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                http_response_code(404);
+                echo json_encode(['message' => 'User not found.']);
+                return;
+            }
+
+            if ($action === 'revoke') {
+                // Determine logical "previous" end time - simply set to NOW()
+                $now = new DateTime();
+                $stmt = $pdo->prepare("UPDATE users SET hasMaterialAccess = 0, materialPaidAccessEndTime = ? WHERE id = ?");
+                $stmt->execute([$now->format('Y-m-d H:i:s'), $userId]);
+
+                createNotification($userId, 'system_alert', "Your subscription has been cancelled by an administrator.", null);
+
+                http_response_code(200);
+                echo json_encode(['message' => 'Subscription revoked successfully.']);
+
+            } elseif ($action === 'extend') {
+                $days = (int) $value;
+                if ($days <= 0) {
+                    http_response_code(400);
+                    echo json_encode(['message' => 'Invalid extension duration.']);
+                    return;
+                }
+
+                $currentExpiryStr = $user['materialPaidAccessEndTime'];
+                $expiryDate = $currentExpiryStr ? new DateTime($currentExpiryStr) : new DateTime();
+                $now = new DateTime();
+
+                // If expired, start from NOW. If active, add to existing expiry.
+                if ($expiryDate < $now) {
+                    $expiryDate = $now;
+                }
+
+                $expiryDate->modify("+{$days} days");
+                $newExpiryStr = $expiryDate->format('Y-m-d H:i:s');
+
+                $stmt = $pdo->prepare("UPDATE users SET hasMaterialAccess = 1, materialPaidAccessEndTime = ? WHERE id = ?");
+                $stmt->execute([$newExpiryStr, $userId]);
+
+                createNotification($userId, 'payment_status', "Your subscription has been extended by {$days} days. New expiry: {$newExpiryStr}", null);
+
+                http_response_code(200);
+                echo json_encode(['message' => "Subscription extended successfully! New expiry: {$newExpiryStr}"]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['message' => 'Invalid action.']);
+            }
+
+        } catch (Exception $e) {
+            error_log("Admin manage subscription error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['message' => 'Server error occurred.']);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['message' => 'Method Not Allowed']);
+    }
 }
