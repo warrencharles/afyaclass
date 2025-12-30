@@ -551,10 +551,10 @@ export const AdminContentTab: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleViewEdit(content)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Eye size={14} /></button>
-                <button onClick={() => toggleEditForm(content)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition-all"><Edit size={14} /></button>
-                <button onClick={() => triggerDelete(content)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+              <div className="flex space-x-1">
+                <button onClick={() => handleViewEdit(content)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="View"><Eye size={16} /></button>
+                <button onClick={() => toggleEditForm(content)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Edit"><Edit size={16} /></button>
+                <button onClick={() => triggerDelete(content)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>
               </div>
             </div>
             <CardContent className="p-5">

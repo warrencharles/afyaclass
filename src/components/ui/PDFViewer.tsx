@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { motion, AnimatePresence } from 'framer-motion';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+// CSS imports removed as we disabled text/annotation layers
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -193,12 +193,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                 <div className="relative">
                   <Page
                     pageNumber={pageNumber}
-                    scale={1.0}
                     width={containerWidth ? Math.min(containerWidth, 1000) : 300}
-                    className="mb-4 shadow-lg"
+                    className="mb-4 shadow-md bg-white" // Cleaned up classes
                     renderAnnotationLayer={false}
-                    renderTextLayer={false} // Disable text layer to prevent selection
-                    loading={<div className="h-[600px] w-full bg-white animate-pulse" />}
+                    renderTextLayer={false}
+                    loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
                   {/* Interaction blocker overlay */}
                   <div className="absolute inset-0 z-10" />
