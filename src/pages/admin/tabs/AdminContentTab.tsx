@@ -543,15 +543,15 @@ export const AdminContentTab: React.FC = () => {
                 <div className="p-2 bg-white rounded-xl shadow-sm">
                   {getContentTypeIcon(content.type)}
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-black text-slate-800 text-sm truncate pr-4">{content.title}</h3>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-black text-slate-800 text-sm truncate pr-2">{content.title}</h3>
                   <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                     <MapPin size={10} className="mr-1" />
                     {getSubjectName(content.subjectId)}
                   </div>
                 </div>
               </div>
-              <div className="flex gap-1 relative z-20">
+              <div className="flex gap-2 relative z-20 flex-shrink-0 ml-2">
                 <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-100" title="View"><Eye size={18} /></button>
                 <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all opacity-100" title="Edit"><Edit size={18} /></button>
                 <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-100" title="Delete"><Trash2 size={18} /></button>
@@ -575,9 +575,7 @@ export const AdminContentTab: React.FC = () => {
                   }`}>
                   {content.fileType || 'File'}
                 </span>
-                <button onClick={() => handleViewEdit(content)} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline px-2">
-                  Open Resource
-                </button>
+                {/* Text button removed as requested, Eye icon in header handles opening */}
               </div>
             </CardContent>
 

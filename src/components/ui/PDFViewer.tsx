@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { motion, AnimatePresence } from 'framer-motion';
 // CSS imports removed as we disabled text/annotation layers
@@ -88,7 +89,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
     return () => window.removeEventListener('keydown', handleKeydown);
   }, []);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden"
       onContextMenu={(e) => e.preventDefault()}
@@ -230,7 +231,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
