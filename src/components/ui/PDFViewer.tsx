@@ -78,6 +78,26 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
     setIsLoading(false);
   }
 
+  // Body scroll lock and security shortcuts
+  useEffect(() => {
+    // Lock background scroll
+    document.body.style.overflow = 'hidden';
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      // Block Ctrl/Cmd + P (Print), S (Save), C (Copy), U (Source)
+      if ((e.ctrlKey || e.metaKey) && ['p', 's', 'c', 'u'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, []);
+
   const toggleFullscreen = () => {
     // Simply toggle the React state first
     setIsFullscreen(!isFullscreen);
@@ -98,7 +118,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 print:hidden"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden touch-none overflow-hidden"
+      onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -121,7 +142,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
         .react-pdf__Page__textLayer {
           text-rendering: optimizeLegibility;
         }
-        /* Hide scrollbars but allow scrolling */
+        /* Prevent background bleed scroll */
+        .pdf-viewer-container {
+          overscroll-behavior: contain;
+        }
+        /* Hide scrollbars but allow scrolling if ever needed */
         .no-scrollbar::-webkit-scrollbar {
           display: none;
         }
@@ -213,7 +238,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className="flex-1 overflow-hidden p-4 md:p-8 flex justify-center items-center"
+            className="flex-1 overflow-hidden p-4 md:p-8 flex justify-center items-center pdf-viewer-container"
             ref={containerRef}
           >
             <div className="relative shadow-2xl bg-white origin-center">
@@ -236,6 +261,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                     renderTextLayer={true}
                     loading={<div className="h-[600px] w-400 bg-slate-50 animate-pulse rounded-lg" />}
                   />
+                  {/* Invisible Overlay to block interaction/selection */}
+                  <div className="absolute inset-0 z-20 cursor-default" />
                 </div>
               </Document>
             </div>
