@@ -17,6 +17,13 @@ import {
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+// Standard PDF options to ensure fonts and cmaps load correctly (Best Practice)
+const pdfjsOptions = {
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapPacked: true,
+  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+};
+
 interface PDFViewerProps {
   fileUrl: string;
   fileName: string;
@@ -91,7 +98,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden touch-none"
       onContextMenu={(e) => e.preventDefault()}
     >
       <style>{`
@@ -120,6 +127,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           w-full h-full md:h-[90vh] md:max-w-6xl
           ${isFullscreen ? 'fixed inset-0 rounded-none h-full max-w-none' : ''}
         `}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header - "Classic" Light Theme Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 z-50 shadow-sm">
@@ -179,7 +187,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-start"
+            className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-start touch-pan-y"
             ref={containerRef}
           >
             <div className="bg-white shadow-xl min-h-[500px] transition-shadow duration-300">
@@ -189,15 +197,17 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                 onLoadError={onDocumentLoadError}
                 loading={null} // Handled by overlay above
                 className="max-w-full"
+                options={pdfjsOptions} // Apply Best Practice Config
               >
                 {/* Render Main Page */}
                 <div className="relative">
                   <Page
                     pageNumber={pageNumber}
                     width={containerWidth ? Math.min(containerWidth, 1000) : 300}
-                    className="mb-4 shadow-md bg-white" // Cleaned up classes
+                    className="mb-4 shadow-md bg-white text-rendering-optimizeLegibility" // Cleaned up classes
                     renderAnnotationLayer={false}
                     renderTextLayer={false}
+                    devicePixelRatio={Math.min(window.devicePixelRatio || 1, 2)} // Fixes "thin" text on high DPI
                     loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
                   {/* Interaction blocker overlay */}
@@ -209,23 +219,32 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Floating Pagination Controls (Bottom Center) */}
           {!isLoading && !error && numPages && numPages > 1 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-lg border border-gray-200 rounded-full px-4 py-2 flex items-center gap-4 z-20">
+            <div
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 z-30 shadow-black/20"
+              onClick={(e) => e.stopPropagation()} // CRITICAL: Stop click prop preventing accidental close
+            >
               <button
-                onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPageNumber(p => Math.max(1, p - 1));
+                }}
                 disabled={pageNumber <= 1}
-                className="p-1.5 hover:bg-gray-100 rounded-full disabled:opacity-30 text-gray-700"
+                className="p-1 hover:bg-white/10 rounded-full disabled:opacity-30 text-white transition-all active:scale-90"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={24} />
               </button>
-              <span className="text-sm font-medium text-gray-700 w-16 text-center">
+              <span className="text-sm font-bold text-white w-16 text-center tabular-nums">
                 {pageNumber} / {numPages}
               </span>
               <button
-                onClick={() => setPageNumber(p => Math.min(numPages || p, p + 1))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPageNumber(p => Math.min(numPages || p, p + 1));
+                }}
                 disabled={pageNumber >= (numPages || 1)}
-                className="p-1.5 hover:bg-gray-100 rounded-full disabled:opacity-30 text-gray-700"
+                className="p-1 hover:bg-white/10 rounded-full disabled:opacity-30 text-white transition-all active:scale-90"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={24} />
               </button>
             </div>
           )}
