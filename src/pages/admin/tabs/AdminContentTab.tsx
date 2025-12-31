@@ -530,8 +530,8 @@ export const AdminContentTab: React.FC = () => {
           </div>
         ) : filteredContents.map(content => (
           <Card key={content.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 bg-white hover:shadow-xl transition-all duration-500 rounded-[2rem] overflow-hidden border ${selectedIds.includes(content.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'border-slate-100'}`}>
-            <div className="p-2 border-b border-slate-50 flex items-center gap-2">
-              <div className="flex-shrink-0 h-8 flex items-center">
+            <div className="p-3 border-b border-slate-50 flex items-start gap-3">
+              <div className="flex-shrink-0 pt-0.5">
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(content.id)}
@@ -539,41 +539,43 @@ export const AdminContentTab: React.FC = () => {
                   className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
                 />
               </div>
-              <div className="flex-shrink-0 p-1.5 bg-white rounded-xl shadow-sm">
+              <div className="flex-shrink-0 p-1.5 bg-white rounded-xl shadow-sm border border-slate-100">
                 {getContentTypeIcon(content.type)}
               </div>
-              <div className="min-w-0 flex-1 flex flex-col justify-center">
-                <h3 className="font-black text-slate-800 text-xs sm:text-sm line-clamp-2 leading-tight">{content.title}</h3>
-                <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-                  <MapPin size={9} className="mr-1 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="font-black text-slate-800 text-sm leading-snug mb-1 line-clamp-2">{content.title}</h3>
+                <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                  <MapPin size={10} className="mr-1 flex-shrink-0" />
                   <span className="truncate">{getSubjectName(content.subjectId)}</span>
                 </div>
               </div>
-              <div className="flex gap-1 flex-shrink-0 items-center">
-                <button onClick={() => handleViewEdit(content)} className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-100" title="View"><Eye size={16} /></button>
-                <button onClick={() => toggleEditForm(content)} className="p-1.5 sm:p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all opacity-100" title="Edit"><Edit size={16} /></button>
-                <button onClick={() => triggerDelete(content)} className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-100" title="Delete"><Trash2 size={16} /></button>
-              </div>
             </div>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4 mb-3">
+
+            <CardContent className="p-4 pt-3">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="space-y-0.5">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Semester</p>
-                  <p className="text-xs font-bold text-slate-600">{content.semester || 'N/A'}</p>
+                  <p className="text-sm font-bold text-slate-700">{content.semester || 'N/A'}</p>
                 </div>
                 <div className="space-y-0.5 text-right">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Date Added</p>
-                  <p className="text-xs font-bold text-slate-600">{new Date(content.createdAt).toLocaleDateString()}</p>
+                  <p className="text-sm font-bold text-slate-700">{new Date(content.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
-              <div className="flex justify-between items-center bg-slate-50/50 p-2 rounded-xl">
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${content.fileType === 'pdf' ? 'bg-red-100 text-red-600' :
-                  content.fileType === 'image' ? 'bg-blue-100 text-blue-600' :
-                    'bg-purple-100 text-purple-600'
+
+              <div className="flex justify-between items-center pt-3 border-t border-slate-50">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${content.fileType === 'pdf' ? 'bg-red-50 text-red-600 border border-red-100' :
+                  content.fileType === 'image' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                    'bg-purple-50 text-purple-600 border border-purple-100'
                   }`}>
                   {content.fileType || 'File'}
                 </span>
-                {/* Text button removed as requested, Eye icon in header handles opening */}
+
+                <div className="flex gap-1">
+                  <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all active:scale-95" title="View"><Eye size={18} /></button>
+                  <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all active:scale-95" title="Edit"><Edit size={18} /></button>
+                  <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95" title="Delete"><Trash2 size={18} /></button>
+                </div>
               </div>
             </CardContent>
 
