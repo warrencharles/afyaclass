@@ -12,9 +12,7 @@ import {
   Maximize,
   Minimize,
   Loader2,
-  FileText,
-  ZoomIn,
-  ZoomOut
+  FileText
 } from 'lucide-react';
 
 // Configure pdfjs worker
@@ -43,7 +41,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(0); // 0 = Default, 1 = Zoom x1.5, 2 = Zoom x2.0
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -118,7 +115,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
   };
 
 
-  const zoomScale = zoomLevel === 0 ? 1 : zoomLevel === 1 ? 1.5 : 2.25;
+
 
   return createPortal(
     <div
@@ -211,28 +208,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-1">
-              <button
-                onClick={() => setZoomLevel(z => Math.max(0, z - 1))}
-                disabled={zoomLevel <= 0}
-                className="p-1.5 text-gray-500 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut size={18} />
-              </button>
-              <span className="text-[10px] font-bold text-gray-400 w-8 text-center uppercase tracking-tighter">
-                {zoomLevel === 0 ? '100%' : zoomLevel === 1 ? '150%' : '225%'}
-              </span>
-              <button
-                onClick={() => setZoomLevel(z => Math.min(2, z + 1))}
-                disabled={zoomLevel >= 2}
-                className="p-1.5 text-gray-500 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn size={18} />
-              </button>
-            </div>
-            <div className="w-px h-6 bg-gray-200 mx-1 hidden sm:block"></div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -277,23 +252,23 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className={`flex-1 ${zoomLevel > 0 ? 'overflow-auto' : 'overflow-hidden'} p-4 md:p-8 flex justify-center items-center pdf-viewer-container`}
+            className="flex-1 overflow-hidden p-4 md:p-8 flex justify-center items-center pdf-viewer-container"
             ref={containerRef}
           >
-            <div className={`relative shadow-2xl bg-white origin-center transition-transform duration-200 ${zoomLevel === 0 ? 'flex items-center justify-center' : ''}`}>
+            <div className="relative shadow-2xl bg-white origin-center flex items-center justify-center">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
                 loading={null}
-                className={`${zoomLevel === 0 ? 'flex items-center justify-center overflow-hidden' : ''}`}
+                className="flex items-center justify-center overflow-hidden"
                 options={pdfjsOptions}
               >
                 <div className="relative flex items-center justify-center overflow-hidden">
                   <Page
                     pageNumber={pageNumber}
-                    // Balanced scale factor with zoomLevel modifier
-                    scale={(containerWidth < 768 ? 1.0 : 1.2) * zoomScale}
+                    // Persisting the improved sharp scale (no manual zoom needed)
+                    scale={containerWidth < 768 ? 1.0 : 1.2}
                     devicePixelRatio={window.devicePixelRatio || 1}
                     className="shadow-inner"
                     renderAnnotationLayer={false}
