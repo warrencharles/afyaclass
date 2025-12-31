@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { motion, AnimatePresence } from 'framer-motion';
-// CSS imports removed as we disabled text/annotation layers
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
 
 import {
   ChevronLeft,
@@ -221,7 +222,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                     width={containerWidth ? Math.min(containerWidth, 1000) : 300}
                     className="bg-white" // Cleaned up classes
                     renderAnnotationLayer={false}
-                    renderTextLayer={false}
+                    renderTextLayer={true}
                     devicePixelRatio={Math.min(window.devicePixelRatio || 1, 3)} // Fixes "thin" text on high DPI
                     loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
