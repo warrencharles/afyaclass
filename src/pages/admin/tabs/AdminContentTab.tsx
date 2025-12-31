@@ -89,6 +89,9 @@ export const AdminContentTab: React.FC = () => {
     subjectId: undefined as number | undefined,
     type: 'note' as ContentType,
     videoUrl: null as string | null,
+    fileUrl: undefined as string | undefined,
+    fileType: undefined as 'pdf' | 'image' | 'video' | undefined,
+    originalFileName: null as string | null,
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,6 +135,9 @@ export const AdminContentTab: React.FC = () => {
         subjectId: contentItem.subjectId || undefined,
         type: contentItem.type,
         videoUrl: contentItem.videoUrl || null,
+        fileUrl: contentItem.fileUrl,
+        fileType: contentItem.fileType,
+        originalFileName: contentItem.originalFileName ?? null,
       });
       setContentFormat(contentItem.videoUrl ? 'video' : 'file');
       setSelectedFileForUpload(null);
@@ -265,6 +271,9 @@ export const AdminContentTab: React.FC = () => {
       subjectId: undefined,
       type: 'note',
       videoUrl: null,
+      fileUrl: undefined,
+      fileType: undefined,
+      originalFileName: null,
     });
     setSelectedFileForUpload(null);
     setUploadProgress(0);
