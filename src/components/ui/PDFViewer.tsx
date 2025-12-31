@@ -79,33 +79,27 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
   }
 
   const toggleFullscreen = () => {
-    if (!viewerRef.current) return;
-    if (!document.fullscreenElement) {
-      viewerRef.current.requestFullscreen().catch(console.error);
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+    // Simply toggle the React state first
+    setIsFullscreen(!isFullscreen);
+
+    // Attempt browser-level fullscreen only if available and desired
+    if (viewerRef.current) {
+      if (!document.fullscreenElement) {
+        viewerRef.current.requestFullscreen?.().catch(() => {
+          console.warn("Fullscreen API not supported or denied.");
+        });
+      } else {
+        document.exitFullscreen?.();
+      }
     }
   };
 
-  // Block shortcuts (Printing/Saving/Copying)
-  useEffect(() => {
-    const handleKeydown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && ['p', 's', 'c', 'u'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  }, []);
+
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden touch-none"
-      onContextMenu={(e) => e.preventDefault()}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 print:hidden"
       onPointerDown={(e) => {
-        // Handle backdrop click here (safer vs ghost clicks)
         if (e.target === e.currentTarget) {
           onClose();
         }
@@ -219,30 +213,29 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className="flex-1 overflow-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-center touch-pan-y"
+            className="flex-1 overflow-hidden p-4 md:p-8 flex justify-center items-center"
             ref={containerRef}
           >
-            <div className="relative shadow-md bg-white">
+            <div className="relative shadow-2xl bg-white origin-center">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
                 loading={null}
-                className="max-w-full"
+                className="flex items-center justify-center overflow-hidden"
                 options={pdfjsOptions}
               >
-                <div className="relative">
+                <div className="relative flex items-center justify-center overflow-hidden">
                   <Page
                     pageNumber={pageNumber}
-                    // Increase scale for high-DPI screens to ensure crisp text
-                    scale={Math.max(window.devicePixelRatio || 1, 2) * (containerWidth < 768 ? 0.6 : 0.8)}
-                    devicePixelRatio={window.devicePixelRatio}
-                    className="bg-white"
+                    // Balanced scale that fits without forced scrolling
+                    scale={containerWidth < 768 ? 0.9 : 1.1}
+                    devicePixelRatio={window.devicePixelRatio || 1}
+                    className="shadow-inner"
                     renderAnnotationLayer={false}
                     renderTextLayer={true}
-                    loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
+                    loading={<div className="h-[600px] w-400 bg-slate-50 animate-pulse rounded-lg" />}
                   />
-                  <div className="absolute inset-0 z-10" />
                 </div>
               </Document>
             </div>

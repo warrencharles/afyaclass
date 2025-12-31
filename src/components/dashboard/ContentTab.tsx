@@ -179,17 +179,14 @@ export const ContentTab: React.FC<ContentTabProps> = ({
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="full" contentPaddingClass="p-0">
-        {selectedFile && (
+      <Modal isOpen={isModalOpen && selectedFile?.type !== 'pdf'} onClose={() => setIsModalOpen(false)} size="full" contentPaddingClass="p-0">
+        {selectedFile && selectedFile.type !== 'pdf' && (
           <div className="h-[90vh] bg-gray-900 flex flex-col">
             <div className="h-12 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-4 text-white">
               <span className="font-medium text-sm truncate">{selectedFile.name}</span>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white text-sm">Close</button>
             </div>
             <div className="flex-1 overflow-hidden relative">
-              {selectedFile.type === 'pdf' && (
-                <PDFViewer fileUrl={selectedFile.url} fileName={selectedFile.name} onClose={() => setIsModalOpen(false)} />
-              )}
               {selectedFile.type === 'video' && (
                 <GenericVideoPlayer videoUrl={selectedFile.url} title={selectedFile.name} onClose={() => setIsModalOpen(false)} />
               )}
@@ -202,6 +199,11 @@ export const ContentTab: React.FC<ContentTabProps> = ({
           </div>
         )}
       </Modal>
+
+      {/* Standalone PDF Viewer for better state management */}
+      {isModalOpen && selectedFile?.type === 'pdf' && (
+        <PDFViewer fileUrl={selectedFile.url} fileName={selectedFile.name} onClose={() => setIsModalOpen(false)} />
+      )}
 
       <PaymentProofFormModal
         isOpen={isPaymentModalOpen}

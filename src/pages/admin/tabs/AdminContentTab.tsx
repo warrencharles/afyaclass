@@ -637,12 +637,12 @@ export const AdminContentTab: React.FC = () => {
         ))}
       </div>
 
-      {/* Viewer Modal - Use 'full' size for PDF to match User experience */}
+      {/* Viewer Modal - For Images and Videos */}
       <Modal
-        isOpen={isModalOpen}
+        isOpen={isModalOpen && selectedFileForView?.type !== 'pdf'}
         onClose={() => setIsModalOpen(false)}
         title={selectedFileForView?.title || "Viewer"}
-        size={selectedFileForView?.type === 'pdf' ? 'full' : '5xl'}
+        size="5xl"
         contentPaddingClass="p-0"
       >
         <div className="w-full h-[85vh] bg-slate-900 overflow-hidden flex items-center justify-center">
@@ -655,9 +655,6 @@ export const AdminContentTab: React.FC = () => {
             <GenericVideoPlayer videoUrl={selectedFileForView.videoUrl} title={selectedFileForView.title} onClose={() => setIsModalOpen(false)} />
           )}
         </div>
-        {selectedFileForView?.type === 'pdf' && (
-          <PDFViewer fileUrl={selectedFileForView.url || ''} fileName={selectedFileForView.title} onClose={() => setIsModalOpen(false)} />
-        )}
       </Modal>
 
       {/* Confirmation Popup */}
@@ -669,7 +666,8 @@ export const AdminContentTab: React.FC = () => {
         message={confirmModal.message}
         variant={confirmModal.variant}
       />
-      {/* Full Screen PDF Viewer (Outside Modal for correct z-index/fixed positioning) */}
+
+      {/* PDF Viewer - Standalone Modal Alternative */}
       {isModalOpen && selectedFileForView?.type === 'pdf' && (
         <PDFViewer
           fileUrl={selectedFileForView.url || ''}
