@@ -15,15 +15,14 @@ import {
 } from 'lucide-react';
 
 // Configure pdfjs worker
-// Configure pdfjs worker to exact version match
-const pdfjsVersion = '4.4.168';
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
+// Configure pdfjs worker to match runtime version exactly
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // Standard PDF options to ensure fonts and cmaps load correctly (Best Practice)
 const pdfjsOptions = {
-  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/cmaps/`,
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
   cMapPacked: true,
-  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/standard_fonts/`,
+  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
 };
 
 interface PDFViewerProps {
