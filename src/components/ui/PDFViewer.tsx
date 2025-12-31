@@ -19,10 +19,12 @@ import {
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // Standard PDF options to ensure fonts and cmaps load correctly (Best Practice)
+// Standard PDF options to ensure fonts and cmaps load correctly (Best Practice)
 const pdfjsOptions = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
   cMapPacked: true,
   standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+  disableFontFace: false, // Ensure fonts are loaded
 };
 
 interface PDFViewerProps {
@@ -112,6 +114,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
         @media print {
           body { display: none !important; }
         }
+        /* Fix extra space below PDF canvas and ensure centering */
+        .react-pdf__Page__canvas {
+          display: block !important;
+          margin: 0 auto;
+          max-width: 100%;
+          height: auto !important;
+        }
       `}</style>
       {/* Backdrop (Visual Only) */}
       <motion.div
@@ -193,10 +202,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-start touch-pan-y"
+            className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-center touch-pan-y"
             ref={containerRef}
           >
-            <div className="my-auto relative">
+            <div className="relative shadow-md">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
@@ -210,7 +219,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                   <Page
                     pageNumber={pageNumber}
                     width={containerWidth ? Math.min(containerWidth, 1000) : 300}
-                    className="mb-4 shadow-md bg-white text-rendering-optimizeLegibility" // Cleaned up classes
+                    className="bg-white" // Cleaned up classes
                     renderAnnotationLayer={false}
                     renderTextLayer={false}
                     devicePixelRatio={Math.min(window.devicePixelRatio || 1, 3)} // Fixes "thin" text on high DPI
