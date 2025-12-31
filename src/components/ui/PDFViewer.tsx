@@ -100,19 +100,24 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
     <div
       className="fixed inset-0 z-[99999] flex items-center justify-center p-0 md:p-6 select-none print:hidden touch-none"
       onContextMenu={(e) => e.preventDefault()}
+      onPointerDown={(e) => {
+        // Handle backdrop click here (safer vs ghost clicks)
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <style>{`
         @media print {
           body { display: none !important; }
         }
       `}</style>
-      {/* Backdrop */}
+      {/* Backdrop (Visual Only) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm -z-10" // Visual background
       />
 
       {/* Main Modal Container */}
