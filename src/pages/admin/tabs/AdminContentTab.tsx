@@ -407,25 +407,29 @@ export const AdminContentTab: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-blue-50 shadow-sm flex flex-col md:flex-row gap-2">
-        <div className="relative flex-1">
+      {/* Filters & Search - Improved Mobile/Desktop Layout */}
+      <div className="bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-blue-50 shadow-sm flex flex-col md:flex-row gap-3">
+        {/* Search - Full width on mobile, Fixed width on desktop */}
+        <div className="relative w-full md:w-72 flex-shrink-0">
           <Input
             placeholder="Search materials..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 bg-white/60 border-transparent rounded-xl focus:bg-white"
+            className="pl-12 bg-white/60 border-transparent rounded-xl focus:bg-white transition-all shadow-sm focus:shadow-md h-11"
             icon={<Search size={18} className="text-slate-400" />}
             fullWidth
           />
         </div>
-        <div className="flex overflow-x-auto no-scrollbar gap-2 px-1">
+
+        {/* Filters - Scrollable horizontal list taking remaining space */}
+        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1 min-w-0">
           {contentTypes.map(type => (
             <button
               key={type.value}
               onClick={() => setSelectedContentType(type.value as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${selectedContentType === type.value
-                ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                : 'text-slate-500 hover:bg-slate-50'
+              className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex-shrink-0 border ${selectedContentType === type.value
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200'
+                : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
                 }`}
             >
               {type.label}
