@@ -196,7 +196,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
             className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-start touch-pan-y"
             ref={containerRef}
           >
-            <div className="bg-white shadow-xl min-h-[500px] transition-shadow duration-300">
+            <div className="my-auto relative">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
