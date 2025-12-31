@@ -7,6 +7,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Edit, Trash2, Plus, BookOpen, Search, Layers, Hash, XCircle, Loader2 } from 'lucide-react';
 import { Class } from '../../../types';
+import { naturalSort } from '../../../utils/sorting';
 
 const MAX_DESCRIPTION_LENGTH = 100;
 
@@ -77,7 +78,7 @@ export const AdminClassesTab: React.FC = () => {
       const code = (classItem.classCode || '').toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || code.includes(term);
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }).sort((a, b) => naturalSort(a.name || '', b.name || ''));
   }, [classes, searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

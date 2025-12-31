@@ -9,6 +9,7 @@ import { ProgressiveImage } from '../ui/ProgressiveImage';
 import { GenericVideoPlayer } from '../ui/GenericVideoPlayer';
 import { PaymentProofFormModal } from './PaymentProofFormModal';
 import { API_BASE_URL } from '../../utils/api';
+import { sortByProperty } from '../../utils/sorting';
 
 interface ContentTabProps {
   contentType: ContentType;
@@ -52,7 +53,7 @@ export const ContentTab: React.FC<ContentTabProps> = ({
   const getSubjectName = useCallback((id: number) => subjects.find(s => s.id === id)?.name || 'Unknown', [subjects]);
 
   const filteredContents = useMemo(() => {
-    return getContentByType(contentType).filter(content => {
+    const filtered = getContentByType(contentType).filter(content => {
       const matchesSubject = selectedSubjectId ? content.subjectId === selectedSubjectId : relevantSubjectIds.includes(content.subjectId);
       if (!searchTerm.trim()) return matchesSubject;
       return matchesSubject && (
@@ -60,6 +61,8 @@ export const ContentTab: React.FC<ContentTabProps> = ({
         getSubjectName(content.subjectId).toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
+
+    return sortByProperty(filtered, 'title');
   }, [contentType, relevantSubjectIds, getContentByType, searchTerm, getSubjectName, selectedSubjectId]);
 
   const handleOpenContent = async (content: any) => {

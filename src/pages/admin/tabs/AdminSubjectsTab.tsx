@@ -8,6 +8,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Edit, Trash2, Plus, GraduationCap, Search, BookOpen, Loader2, MapPin, XCircle } from 'lucide-react';
 import { Subject } from '../../../types';
+import { naturalSort } from '../../../utils/sorting';
 
 export const AdminSubjectsTab: React.FC = () => {
   const { subjects = [], addSubject, updateSubject, deleteSubject, classLevels = [], classes = [], isLoading, bulkDeleteSubjects } = useAdmin();
@@ -146,7 +147,7 @@ export const AdminSubjectsTab: React.FC = () => {
   };
 
   const classLevelOptions = useMemo(() => {
-    const sorted = [...classLevels].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = [...classLevels].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return [
       { value: '', label: 'Select Pathway' },
       ...sorted.map(cl => ({
@@ -168,7 +169,7 @@ export const AdminSubjectsTab: React.FC = () => {
       const levelName = getClassLevelName(subject.classLevelId).toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || levelName.includes(term);
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }).sort((a, b) => naturalSort(a.name || '', b.name || ''));
   }, [subjects, searchTerm, classLevels]);
 
   if (isLoading) {

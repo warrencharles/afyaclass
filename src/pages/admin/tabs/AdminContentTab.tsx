@@ -15,6 +15,7 @@ import PDFViewer from '../../../components/ui/PDFViewer';
 import { ProgressiveImage } from '../../../components/ui/ProgressiveImage';
 import { GenericVideoPlayer } from '../../../components/ui/GenericVideoPlayer';
 import { API_BASE_URL } from '../../../utils/api';
+import { naturalSort } from '../../../utils/sorting';
 
 export const AdminContentTab: React.FC = () => {
   const { subjects = [], classes = [], classLevels = [], isLoading: isAdminLoading } = useAdmin();
@@ -212,7 +213,7 @@ export const AdminContentTab: React.FC = () => {
   };
 
   const classOptions = useMemo(() => {
-    const sorted = [...classes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = [...classes].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return [
       { value: '', label: 'Select Class' },
       ...sorted.map(c => ({ value: c.id.toString(), label: c.name }))
@@ -245,7 +246,7 @@ export const AdminContentTab: React.FC = () => {
       return matchesClassLevel && matchesSemester;
     }).map(subject => ({ value: subject.id.toString(), label: subject.name }));
 
-    const sorted = [...filtered].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    const sorted = [...filtered].sort((a, b) => naturalSort(a.label || '', b.label || ''));
 
     return [{ value: '', label: 'Select Subject' }, ...sorted];
   }, [subjects, formData.classLevelId, formData.semester]);
@@ -259,7 +260,7 @@ export const AdminContentTab: React.FC = () => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = title.includes(term) || sName.includes(term);
       return matchesType && matchesSearch;
-    }).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    }).sort((a, b) => naturalSort(a.title || '', b.title || ''));
   }, [contents, selectedContentType, searchTerm, subjects]);
 
   const resetForm = () => {

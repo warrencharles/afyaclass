@@ -8,6 +8,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Edit, Trash2, Plus, Layers, Search, XCircle, GraduationCap, MapPin, Loader2 } from 'lucide-react';
 import { ClassLevel } from '../../../types';
+import { naturalSort } from '../../../utils/sorting';
 
 export const AdminClassLevelsTab: React.FC = () => {
   const { classLevels = [], classes = [], addClassLevel, updateClassLevel, deleteClassLevel, isLoading, bulkDeleteClassLevels } = useAdmin();
@@ -133,7 +134,7 @@ export const AdminClassLevelsTab: React.FC = () => {
 
   const classOptions = useMemo(() => {
     if (!Array.isArray(classes)) return [{ value: '', label: 'Choose Parent Class' }];
-    const sorted = [...classes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = [...classes].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return [
       { value: '', label: 'Choose Parent Class' },
       ...sorted.map(c => ({ value: c.id.toString(), label: c.name }))
@@ -147,7 +148,7 @@ export const AdminClassLevelsTab: React.FC = () => {
       const cName = getClassName(l.classId).toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || cName.includes(term);
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }).sort((a, b) => naturalSort(a.name || '', b.name || ''));
   }, [classLevels, searchTerm, classes]);
 
   if (isLoading) {
