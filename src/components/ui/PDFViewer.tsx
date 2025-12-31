@@ -121,6 +121,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           margin: 0 auto;
           max-width: 100%;
           height: auto !important;
+          image-rendering: -webkit-optimize-contrast; /* Safari/iOS sharpness */
+          image-rendering: crisp-edges;
+        }
+        .react-pdf__Page__textLayer {
+          text-rendering: optimizeLegibility;
         }
         /* Hide scrollbars but allow scrolling */
         .no-scrollbar::-webkit-scrollbar {
@@ -229,7 +234,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                 <div className="relative">
                   <Page
                     pageNumber={pageNumber}
-                    scale={containerWidth < 768 ? 1.25 : 1.5}
+                    // Increase scale for high-DPI screens to ensure crisp text
+                    scale={Math.max(window.devicePixelRatio || 1, 2) * (containerWidth < 768 ? 0.6 : 0.8)}
+                    devicePixelRatio={window.devicePixelRatio}
                     className="bg-white"
                     renderAnnotationLayer={false}
                     renderTextLayer={true}
