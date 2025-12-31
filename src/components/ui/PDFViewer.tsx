@@ -225,8 +225,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           {/* Floating Pagination Controls (Bottom Center) */}
           {!isLoading && !error && numPages && numPages > 1 && (
             <div
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 z-30 shadow-black/20"
-              onClick={(e) => e.stopPropagation()} // CRITICAL: Stop click prop preventing accidental close
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 z-50 shadow-black/20"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <button
                 onClick={(e) => {
