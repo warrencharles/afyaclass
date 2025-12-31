@@ -138,8 +138,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
         .react-pdf__Page__canvas {
           display: block !important;
           margin: 0 auto;
-          max-width: 100%;
-          height: auto !important;
           image-rendering: -webkit-optimize-contrast; /* Safari/iOS sharpness */
           image-rendering: crisp-edges;
         }
@@ -295,7 +293,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                   <Page
                     pageNumber={pageNumber}
                     // Balanced scale factor with zoomLevel modifier
-                    scale={(containerWidth < 768 ? 0.9 : 1.1) * zoomScale}
+                    scale={(containerWidth < 768 ? 1.0 : 1.2) * zoomScale}
                     devicePixelRatio={window.devicePixelRatio || 1}
                     className="shadow-inner"
                     renderAnnotationLayer={false}
