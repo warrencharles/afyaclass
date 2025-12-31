@@ -530,29 +530,29 @@ export const AdminContentTab: React.FC = () => {
           </div>
         ) : filteredContents.map(content => (
           <Card key={content.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 bg-white hover:shadow-xl transition-all duration-500 rounded-[2rem] overflow-hidden border ${selectedIds.includes(content.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'border-slate-100'}`}>
-            <div className="p-3 border-b border-slate-50 flex items-center gap-3">
-              <div className="flex-shrink-0">
+            <div className="p-2 border-b border-slate-50 flex items-center gap-2">
+              <div className="flex-shrink-0 h-8 flex items-center">
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(content.id)}
                   onChange={() => toggleSelection(content.id)}
-                  className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
                 />
               </div>
-              <div className="flex-shrink-0 p-2 bg-white rounded-xl shadow-sm">
+              <div className="flex-shrink-0 p-1.5 bg-white rounded-xl shadow-sm">
                 {getContentTypeIcon(content.type)}
               </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-black text-slate-800 text-sm truncate">{content.title}</h3>
-                <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  <MapPin size={10} className="mr-1" />
-                  {getSubjectName(content.subjectId)}
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
+                <h3 className="font-black text-slate-800 text-xs sm:text-sm truncate leading-tight">{content.title}</h3>
+                <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                  <MapPin size={9} className="mr-1 flex-shrink-0" />
+                  <span className="truncate">{getSubjectName(content.subjectId)}</span>
                 </div>
               </div>
-              <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-100" title="View"><Eye size={18} /></button>
-                <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all opacity-100" title="Edit"><Edit size={18} /></button>
-                <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-100" title="Delete"><Trash2 size={18} /></button>
+              <div className="flex gap-1 flex-shrink-0 items-center">
+                <button onClick={() => handleViewEdit(content)} className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-100" title="View"><Eye size={16} /></button>
+                <button onClick={() => toggleEditForm(content)} className="p-1.5 sm:p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all opacity-100" title="Edit"><Edit size={16} /></button>
+                <button onClick={() => triggerDelete(content)} className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-100" title="Delete"><Trash2 size={16} /></button>
               </div>
             </div>
             <CardContent className="p-4">
