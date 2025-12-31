@@ -135,6 +135,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
         .react-pdf__Page__canvas {
           display: block !important;
           margin: 0 auto;
+          max-width: 100%;
+          height: auto !important;
           image-rendering: -webkit-optimize-contrast; /* Safari/iOS sharpness */
           image-rendering: crisp-edges;
         }
