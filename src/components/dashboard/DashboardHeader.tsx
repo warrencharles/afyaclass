@@ -53,7 +53,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     const profileRef = useRef<HTMLDivElement>(null);
     const classDropdownRef = useRef<HTMLDivElement>(null);
     const semDropdownRef = useRef<HTMLDivElement>(null);
-    const filterToggleRef = useRef<HTMLButtonElement>(null);
 
     // Close menus when clicking outside
     useEffect(() => {
@@ -175,7 +174,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
                             {/* Dropdown Menu */}
                             {showProfileMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in-down origin-top-right">
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in-down origin-top-right z-[60]">
                                     <div className="px-4 py-2 border-b border-gray-50 mb-1">
                                         <p className="text-sm font-bold text-gray-800">{user?.username}</p>
                                         <p className="text-xs text-gray-500 truncate">{user?.email}</p>
