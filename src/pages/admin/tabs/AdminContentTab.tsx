@@ -547,7 +547,7 @@ export const AdminContentTab: React.FC = () => {
                 {getContentTypeIcon(content.type)}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-black text-slate-800 text-sm leading-snug mb-1 line-clamp-2">{content.title}</h3>
+                <h3 className="font-black text-slate-800 text-sm leading-snug mb-1">{content.title}</h3>
                 <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
                   <MapPin size={10} className="mr-1 flex-shrink-0" />
                   <span className="truncate">{getSubjectName(content.subjectId)}</span>
