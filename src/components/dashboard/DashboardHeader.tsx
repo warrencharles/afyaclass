@@ -33,31 +33,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     onMenuToggle,
     onLogout
 }) => {
-    const [showFilters, setShowFilters] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const [activeDropdown, setActiveDropdown] = useState<'class' | 'semester' | null>(null);
-    const filterRef = useRef<HTMLDivElement>(null);
-    const profileRef = useRef<HTMLDivElement>(null);
-    const classDropdownRef = useRef<HTMLDivElement>(null);
-    const semDropdownRef = useRef<HTMLDivElement>(null);
-    const filterToggleRef = useRef<HTMLButtonElement>(null);
-
-    // Onboarding State
-    const [showFilterTip, setShowFilterTip] = useState(false);
-
-    useEffect(() => {
-        const hasSeenTip = localStorage.getItem('hasSeenFilterTip');
-        if (!hasSeenTip) {
-            // Show tip after a short delay for attention
-            const timer = setTimeout(() => setShowFilterTip(true), 1500);
-            return () => clearTimeout(timer);
-        }
-    }, []);
-
-    const dismissFilterTip = () => {
-        setShowFilterTip(false);
-        localStorage.setItem('hasSeenFilterTip', 'true');
-    };
 
     const navItems = [
         { label: 'Home', path: '/dashboard', icon: Home },
@@ -72,17 +48,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         return false;
     };
 
+    const [activeDropdown, setActiveDropdown] = useState<'class' | 'semester' | null>(null);
+    const filterRef = useRef<HTMLDivElement>(null);
+    const profileRef = useRef<HTMLDivElement>(null);
+    const classDropdownRef = useRef<HTMLDivElement>(null);
+    const semDropdownRef = useRef<HTMLDivElement>(null);
+    const filterToggleRef = useRef<HTMLButtonElement>(null);
+
     // Close menus when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (
-                filterRef.current &&
-                !filterRef.current.contains(event.target as Node) &&
-                filterToggleRef.current &&
-                !filterToggleRef.current.contains(event.target as Node)
-            ) {
-                setShowFilters(false);
-            }
             if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
                 setShowProfileMenu(false);
             }
@@ -97,14 +72,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [filterRef, profileRef, classDropdownRef, semDropdownRef]);
-
-    // Auto-expand filters on mobile if class level is not selected (UX for new users)
-    useEffect(() => {
-        if (isMobile && !selectedClassLevel) {
-            setShowFilters(true);
-        }
-    }, [isMobile, selectedClassLevel]);
+    }, [profileRef, classDropdownRef, semDropdownRef]);
 
     return (
         <div className="bg-white/90 backdrop-blur-xl sticky top-0 z-30 border-b border-gray-100 shadow-sm transition-all duration-300">
@@ -185,28 +153,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                             />
                         </div>
 
-                        {/* Mobile Search Toggle (Optional, can just show input if space permits) */}
-                        <button
-                            ref={filterToggleRef}
-                            className="lg:hidden p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 relative transition-colors"
-                            onClick={() => setShowFilters(!showFilters)}
-                        >
-                            <Filter size={20} className={showFilters ? 'text-blue-600' : 'text-gray-500'} />
 
-                            {/* Onboarding Tooltip (Mobile) */}
-                            {showFilterTip && (
-                                <div className="absolute top-full right-0 mt-3 w-48 bg-blue-600 text-white p-3 rounded-xl shadow-xl z-[60] animate-bounce-gentle">
-                                    <div className="absolute -top-1.5 right-3 w-3 h-3 bg-blue-600 rotate-45"></div>
-                                    <p className="text-xs font-medium mb-2">Tap here to select your Class Level & Semester!</p>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); dismissFilterTip(); }}
-                                        className="text-[10px] uppercase font-bold bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg w-full"
-                                    >
-                                        Got it
-                                    </button>
-                                </div>
-                            )}
-                        </button>
 
 
                         <div className="h-8 w-[1px] bg-gray-200 hidden md:block"></div>
@@ -255,14 +202,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     </div>
                 </div>
 
-                {/* Bottom Row: Filters (Desktop: Inline, Mobile: Collapsible) */}
-                {/* Only show this row if we are on the main dashboard tab (implied by usage) OR if mobile filters are toggled */}
+                {/* Bottom Row: Filters & Search (Always visible on mobile) */}
                 <div
                     ref={filterRef}
-                    className={`
-            lg:flex lg:items-center lg:justify-between
-            ${showFilters ? 'flex flex-col gap-4 pt-2 border-t border-gray-100 animate-fade-in-down' : 'hidden'} 
-          `}
+                    className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-2 border-t lg:border-t-0 border-gray-100"
                 >
                     {/* Mobile Search input (Expanded) */}
                     <div className="relative lg:hidden w-full">
@@ -282,20 +225,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <div className="flex items-center gap-2 text-sm text-gray-500 mr-2 hidden lg:flex relative">
                             <Filter size={16} />
                             <span>Filters:</span>
-
-                            {/* Onboarding Tooltip (Hidden on Desktop as requested) */}
-                            {showFilterTip && false && (
-                                <div className="absolute bottom-full left-0 mb-3 w-56 bg-blue-600 text-white p-4 rounded-xl shadow-xl z-[60]">
-                                    <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-blue-600 rotate-45"></div>
-                                    <p className="text-sm font-medium mb-2">Select your settings here to see relevant content.</p>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); dismissFilterTip(); }}
-                                        className="text-xs uppercase font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg w-full"
-                                    >
-                                        Don't show again
-                                    </button>
-                                </div>
-                            )}
                         </div>
 
                         {/* Class Level Dropdown */}

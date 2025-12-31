@@ -122,6 +122,14 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
           max-width: 100%;
           height: auto !important;
         }
+        /* Hide scrollbars but allow scrolling */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none; /* IE and Edge */
+          scrollbar-width: none; /* Firefox */
+        }
       `}</style>
       {/* Backdrop (Visual Only) */}
       <motion.div
@@ -163,8 +171,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           <div className="flex items-center gap-1 sm:gap-2">
             <button
-              onClick={toggleFullscreen}
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFullscreen();
+              }}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
               title="Fullscreen"
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
@@ -206,26 +217,24 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
             className="flex-1 overflow-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-center touch-pan-y"
             ref={containerRef}
           >
-            <div className="relative shadow-md">
+            <div className="relative shadow-md bg-white">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
-                loading={null} // Handled by overlay above
+                loading={null}
                 className="max-w-full"
-                options={pdfjsOptions} // Apply Best Practice Config
+                options={pdfjsOptions}
               >
-                {/* Render Main Page */}
                 <div className="relative">
                   <Page
                     pageNumber={pageNumber}
-                    scale={containerWidth < 768 ? 0.8 : 1.2} // Use Scale instead of Width for crisp text
-                    className="bg-white" // Cleaned up classes
+                    scale={containerWidth < 768 ? 1.25 : 1.5}
+                    className="bg-white"
                     renderAnnotationLayer={false}
                     renderTextLayer={true}
                     loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
-                  {/* Interaction blocker overlay */}
                   <div className="absolute inset-0 z-10" />
                 </div>
               </Document>

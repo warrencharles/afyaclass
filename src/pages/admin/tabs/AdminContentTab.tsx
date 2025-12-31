@@ -590,13 +590,42 @@ export const AdminContentTab: React.FC = () => {
                   <h4 className="font-black text-slate-800 text-sm">Update Content</h4>
                   <button onClick={() => setEditingContentId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={18} /></button>
                 </div>
-                <div className="space-y-4">
-                  <Input value={formData.title || ''} onChange={handleInputChange} name="title" fullWidth placeholder="Title" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select options={classOptions} value={formData.classId?.toString() || ''} onChange={v => handleSelectChange('classId', v)} fullWidth />
-                    <Select options={subjectOptions} value={formData.subjectId?.toString() || ''} onChange={v => handleSelectChange('subjectId', v)} fullWidth />
+                <div className="space-y-4 pb-4">
+                  <Input label="Title" value={formData.title || ''} onChange={handleInputChange} name="title" fullWidth placeholder="Title" />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select label="Class" options={classOptions} value={formData.classId?.toString() || ''} onChange={v => handleSelectChange('classId', v)} fullWidth />
+                    <Select label="Level" options={classLevelOptions} value={formData.classLevelId?.toString() || ''} onChange={v => handleSelectChange('classLevelId', v)} fullWidth />
                   </div>
-                  <Button onClick={handleUpdateContent} fullWidth className="bg-blue-600 text-white font-black py-3 rounded-xl active:scale-95 transition-all text-sm">
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select label="Semester" options={semesterOptions} value={formData.semester || ''} onChange={v => handleSelectChange('semester', v)} fullWidth />
+                    <Select label="Subject" options={subjectOptions} value={formData.subjectId?.toString() || ''} onChange={v => handleSelectChange('subjectId', v)} fullWidth />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Resource Type</label>
+                    <Select
+                      options={[
+                        { value: 'note', label: 'Notes' },
+                        { value: 'book', label: 'Books' },
+                        { value: 'video', label: 'Video Tutorials' },
+                        { value: 'practical', label: 'Practicals' },
+                        { value: 'exam', label: 'Exams' },
+                        { value: 'examGuide', label: 'Exam Guides' },
+                        { value: 'nactvet', label: 'NACTVET Tools' }
+                      ]}
+                      value={formData.type}
+                      onChange={v => handleSelectChange('type', v)}
+                      fullWidth
+                    />
+                  </div>
+
+                  {formData.type === 'video' && (
+                    <Input label="Video URL" value={formData.videoUrl || ''} onChange={handleInputChange} name="videoUrl" fullWidth placeholder="Paste link here..." icon={<Video size={18} />} />
+                  )}
+
+                  <Button onClick={handleUpdateContent} fullWidth className="bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-all text-sm shadow-lg shadow-blue-200">
                     Save Changes
                   </Button>
                 </div>
