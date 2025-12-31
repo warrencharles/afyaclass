@@ -23,7 +23,7 @@
     "lucide-react": "^0.344.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",
-    "pdfjs-dist": "^3.11.174",
+    "pdfjs-dist": "^4.4.168",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.50.1",
