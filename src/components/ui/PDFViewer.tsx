@@ -203,7 +203,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
 
           {/* Document Scroll Container */}
           <div
-            className="flex-1 overflow-y-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-center touch-pan-y"
+            className="flex-1 overflow-auto no-scrollbar sm:custom-scrollbar p-4 md:p-8 flex justify-center items-center touch-pan-y"
             ref={containerRef}
           >
             <div className="relative shadow-md">
@@ -219,11 +219,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                 <div className="relative">
                   <Page
                     pageNumber={pageNumber}
-                    width={containerWidth ? Math.min(containerWidth, 1000) : 300}
+                    scale={containerWidth < 768 ? 0.8 : 1.2} // Use Scale instead of Width for crisp text
                     className="bg-white" // Cleaned up classes
                     renderAnnotationLayer={false}
                     renderTextLayer={true}
-                    devicePixelRatio={Math.min(window.devicePixelRatio || 1, 3)} // Fixes "thin" text on high DPI
                     loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
                   {/* Interaction blocker overlay */}
