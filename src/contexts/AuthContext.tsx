@@ -370,6 +370,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await terminateAllOtherSessionsApi(pendingLoginUserId, null, sessionResolutionToken);
 
       // After successful termination, re-attempt login for the current user
+      // Passing true to skipSuccessToast here because we want ONE final notification
+      // Wait, the user said "if another session is terminated just a single notification should appear"
+      // If I pass true, login will be silent. If I pass false, it will show "Login successful".
+      // Let's pass false to ensure they see "Login successful" at the end.
       await login(pendingLoginCredentials.emailOrUsername, pendingLoginCredentials.password, false);
     } catch (err: any) {
       console.error('AuthContext: Error during all other sessions termination and re-login:', err);

@@ -127,17 +127,22 @@ function handle_login($requestMethod)
                 error_log("handle_login: Clearing stale sessions for user ID: " . $user['id']);
                 $clearStaleSessionsStmt = $pdo->prepare('UPDATE user_sessions SET is_active = FALSE, last_activity = CURRENT_TIMESTAMP WHERE user_id = ? AND is_active = TRUE AND last_activity < (CURRENT_TIMESTAMP - INTERVAL 2 HOUR)');
                 $clearStaleSessionsStmt->execute([$user['id']]);
-                
+
                 // Check for existing active sessions for this user
                 error_log("handle_login: Checking for active sessions for user ID: " . $user['id']);
-                $activeSessionsStmt = $pdo->prepare('SELECT session_id, device_info, login_time FROM user_sessions WHERE user_id = ? AND is_active = TRUE');
-                $activeSessionsStmt->execute([$user['id']]);
-                $activeSessions = $activeSessionsStmt->fetchAll(PDO::FETCH_ASSOC);
-                error_log("handle_login: Found " . count($activeSessions) . " active sessions for user ID: " . $user['id']);
-
                 // If the user is an admin, allow multiple concurrent sessions.
                 // For regular users (students), if active sessions exist, prompt for resolution.
-                if ($user['role'] !== 'admin' && !empty($activeSessions)) {
+                // UNLESS the current session is from the same device (matched by User Agent).
+                $currentUA = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Device';
+                $isSameDevice = false;
+                foreach ($activeSessions as $s) {
+                    if ($s['device_info'] === $currentUA) {
+                        $isSameDevice = true;
+                        break;
+                    }
+                }
+
+                if ($user['role'] !== 'admin' && !empty($activeSessions) && !$isSameDevice) {
                     error_log("handle_login: Non-admin user {$user['username']} (ID: {$user['id']}) has active sessions. Prompting for resolution.");
                     // Generate a short-lived token for session resolution
                     $sessionResolutionToken = generateSessionResolutionToken($user['id']);
