@@ -130,6 +130,11 @@ function handle_login($requestMethod)
 
                 // Check for existing active sessions for this user
                 error_log("handle_login: Checking for active sessions for user ID: " . $user['id']);
+                $activeSessionsStmt = $pdo->prepare('SELECT session_id, device_info, login_time FROM user_sessions WHERE user_id = ? AND is_active = TRUE');
+                $activeSessionsStmt->execute([$user['id']]);
+                $activeSessions = $activeSessionsStmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("handle_login: Found " . count($activeSessions) . " active sessions for user ID: " . $user['id']);
+
                 // If the user is an admin, allow multiple concurrent sessions.
                 // For regular users (students), if active sessions exist, prompt for resolution.
                 // UNLESS the current session is from the same device (matched by User Agent).
