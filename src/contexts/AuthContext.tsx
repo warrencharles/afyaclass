@@ -41,7 +41,7 @@ interface AuthContextType {
   isAuthInitialized: boolean;    // true after initial auth check (valid or invalid)
   setUser: React.Dispatch<React.SetStateAction<User | null>>; // Expose setUser
   setProfile: React.Dispatch<React.SetStateAction<User | null>>; // Expose setProfile
-  login: (emailOrUsername: string, password: string) => Promise<void>; // Removed forceLogin as it's handled internally now
+  login: (emailOrUsername: string, password: string, skipSuccessToast?: boolean) => Promise<void>; // Added skipSuccessToast
   register: (userData: {
     email: string;
     password: string;
@@ -198,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login', { replace: true }); // Navigate back to login page if user cancels
   }, [navigate]);
 
-  const login = useCallback(async (emailOrUsername: string, password: string) => {
+  const login = useCallback(async (emailOrUsername: string, password: string, skipSuccessToast: boolean = false) => {
     isInvalidatingRef.current = false; // Reset invalidation flag on new login attempt
     setIsLoading(true);
     setError(null);
@@ -242,7 +242,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(loggedInUser);
         setProfile(loggedInUser);
 
-        showToast(data.message || 'Login successful!', 'success');
+        if (!skipSuccessToast) {
+          showToast(data.message || 'Login successful!', 'success');
+        }
         navigate(loggedInUser.role === "admin" ? "/admin" : "/dashboard", { replace: true }); // Navigate after setting user
         // Do NOT set isAuthInitialized to true here. It should only reflect the initial app load check.
         return; // Exit after successful login
@@ -362,17 +364,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      showToast('Terminating all other sessions...', 'info');
       closeSessionTerminationModal(); // Close the modal immediately
 
       // Call the backend endpoint to terminate all other sessions
-      // Pass null for currentSessionId because we want to terminate ALL others,
-      // and the new login will establish its own session.
       await terminateAllOtherSessionsApi(pendingLoginUserId, null, sessionResolutionToken);
 
       // After successful termination, re-attempt login for the current user
-      showToast('All other sessions terminated. Attempting to log in...', 'info');
-      await login(pendingLoginCredentials.emailOrUsername, pendingLoginCredentials.password);
+      await login(pendingLoginCredentials.emailOrUsername, pendingLoginCredentials.password, false);
     } catch (err: any) {
       console.error('AuthContext: Error during all other sessions termination and re-login:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to terminate all other sessions and log in.';

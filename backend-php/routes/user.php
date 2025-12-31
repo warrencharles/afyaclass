@@ -123,6 +123,11 @@ function handle_login($requestMethod)
                 }
 
                 // --- SESSION MANAGEMENT LOGIC ---
+                // Deactivate sessions with no activity for more than 2 hours
+                error_log("handle_login: Clearing stale sessions for user ID: " . $user['id']);
+                $clearStaleSessionsStmt = $pdo->prepare('UPDATE user_sessions SET is_active = FALSE, last_activity = CURRENT_TIMESTAMP WHERE user_id = ? AND is_active = TRUE AND last_activity < (CURRENT_TIMESTAMP - INTERVAL 2 HOUR)');
+                $clearStaleSessionsStmt->execute([$user['id']]);
+                
                 // Check for existing active sessions for this user
                 error_log("handle_login: Checking for active sessions for user ID: " . $user['id']);
                 $activeSessionsStmt = $pdo->prepare('SELECT session_id, device_info, login_time FROM user_sessions WHERE user_id = ? AND is_active = TRUE');
