@@ -15,13 +15,15 @@ import {
 } from 'lucide-react';
 
 // Configure pdfjs worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configure pdfjs worker to exact version match
+const pdfjsVersion = '4.4.168';
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
 // Standard PDF options to ensure fonts and cmaps load correctly (Best Practice)
 const pdfjsOptions = {
-  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/cmaps/`,
   cMapPacked: true,
-  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/standard_fonts/`,
 };
 
 interface PDFViewerProps {
@@ -212,7 +214,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
                     className="mb-4 shadow-md bg-white text-rendering-optimizeLegibility" // Cleaned up classes
                     renderAnnotationLayer={false}
                     renderTextLayer={false}
-                    devicePixelRatio={Math.min(window.devicePixelRatio || 1, 2)} // Fixes "thin" text on high DPI
+                    devicePixelRatio={Math.min(window.devicePixelRatio || 1, 3)} // Fixes "thin" text on high DPI
                     loading={<div className="h-[600px] w-full bg-slate-50 animate-pulse rounded-lg" />}
                   />
                   {/* Interaction blocker overlay */}
@@ -228,6 +230,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, onClose }) => 
               className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 z-50 shadow-black/20"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
               <button
                 onClick={(e) => {
