@@ -82,11 +82,13 @@ export const AdminUsersTab: React.FC = () => {
     });
   };
 
-  const classTypeOptions = useMemo(() =>
-    (Array.isArray(classes) ? classes : []).map(cls => ({
+  const classTypeOptions = useMemo(() => {
+    const sorted = [...(Array.isArray(classes) ? classes : [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return sorted.map(cls => ({
       value: cls.classCode,
       label: cls.name,
-    })), [classes]);
+    }));
+  }, [classes]);
 
   const filteredClassLevelOptions = useCallback((selectedClassCode: string | undefined) => {
     if (!Array.isArray(classes) || !Array.isArray(classLevels)) return [];
@@ -94,6 +96,7 @@ export const AdminUsersTab: React.FC = () => {
     if (!selectedClass) return [];
     return classLevels
       .filter(level => level.classId === selectedClass.id)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       .map(level => ({ value: level.name, label: level.name }));
   }, [classes, classLevels]);
 
@@ -109,7 +112,7 @@ export const AdminUsersTab: React.FC = () => {
       const matchesFilter = filterRole === 'all' || (filterRole === user.role);
 
       return matchesSearch && matchesFilter;
-    });
+    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
   }, [users, searchTerm, filterRole]);
 
   const roleOptions = [

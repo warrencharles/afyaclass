@@ -133,9 +133,10 @@ export const AdminClassLevelsTab: React.FC = () => {
 
   const classOptions = useMemo(() => {
     if (!Array.isArray(classes)) return [{ value: '', label: 'Choose Parent Class' }];
+    const sorted = [...classes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     return [
       { value: '', label: 'Choose Parent Class' },
-      ...classes.map(c => ({ value: c.id.toString(), label: c.name }))
+      ...sorted.map(c => ({ value: c.id.toString(), label: c.name }))
     ];
   }, [classes]);
 
@@ -146,7 +147,7 @@ export const AdminClassLevelsTab: React.FC = () => {
       const cName = getClassName(l.classId).toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || cName.includes(term);
-    });
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [classLevels, searchTerm, classes]);
 
   if (isLoading) {

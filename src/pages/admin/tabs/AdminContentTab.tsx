@@ -206,10 +206,10 @@ export const AdminContentTab: React.FC = () => {
   };
 
   const classOptions = useMemo(() => {
-    if (!Array.isArray(classes)) return [{ value: '', label: 'Select Class' }];
+    const sorted = [...classes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     return [
       { value: '', label: 'Select Class' },
-      ...classes.map(c => ({ value: c.id.toString(), label: c.name }))
+      ...sorted.map(c => ({ value: c.id.toString(), label: c.name }))
     ];
   }, [classes]);
 
@@ -239,7 +239,9 @@ export const AdminContentTab: React.FC = () => {
       return matchesClassLevel && matchesSemester;
     }).map(subject => ({ value: subject.id.toString(), label: subject.name }));
 
-    return [{ value: '', label: 'Select Subject' }, ...filtered];
+    const sorted = [...filtered].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+
+    return [{ value: '', label: 'Select Subject' }, ...sorted];
   }, [subjects, formData.classLevelId, formData.semester]);
 
   const filteredContents = useMemo(() => {
@@ -251,7 +253,7 @@ export const AdminContentTab: React.FC = () => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = title.includes(term) || sName.includes(term);
       return matchesType && matchesSearch;
-    });
+    }).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   }, [contents, selectedContentType, searchTerm, subjects]);
 
   const resetForm = () => {

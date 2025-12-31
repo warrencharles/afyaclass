@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext'; // Assuming AuthContext provides userId and role, and isAuthInitialized
 import { useToast } from './ToastContext'; // Assuming ToastContext provides a way to show toasts
 import api from '../utils/api'; // Import the axios instance
@@ -48,7 +48,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://afyaclass.co.tz/backend-php/public';
+
 
   const fetchNotifications = useCallback(async (currentUserId: number | undefined, currentIsAuthenticated: boolean) => {
     if (!currentIsAuthenticated || !currentUserId) {
@@ -81,11 +81,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       });
 
     } catch (error) {
-      console.error(`NotificationContext: Error fetching notifications for user ID ${currentUserId}:`, error);
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        console.log('NotificationContext: Received 401 Unauthorized, user might be logged out.');
+        // Suppress 401 errors for notifications as they are normal during session expiry/transition
+        console.warn('NotificationContext: Received 401 Unauthorized, session may have expired.');
       } else {
-        // showToast('Failed to load notifications.', 'error'); // Suppress to avoid spamming toast
+        console.error(`NotificationContext: Error fetching notifications for user ID ${currentUserId}:`, error);
       }
       setNotifications([]);
       setUnreadCount(0);

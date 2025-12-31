@@ -77,7 +77,7 @@ export const AdminClassesTab: React.FC = () => {
       const code = (classItem.classCode || '').toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || code.includes(term);
-    });
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [classes, searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

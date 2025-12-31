@@ -6,16 +6,13 @@ import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Edit, Trash2, Plus, GraduationCap, Search, BookOpen, Calendar, MapPin, XCircle, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Plus, GraduationCap, Search, BookOpen, Loader2, MapPin, XCircle } from 'lucide-react';
 import { Subject } from '../../../types';
 
 export const AdminSubjectsTab: React.FC = () => {
   const { subjects = [], addSubject, updateSubject, deleteSubject, classLevels = [], classes = [], isLoading, bulkDeleteSubjects } = useAdmin();
-  const { showToast } = showToastContext(); // Wait, I should use useToast()
 
-  function showToastContext() {
-    return useToast();
-  }
+  const { showToast } = useToast();
 
   const [isAddFormVisible, setIsAddFormVisible] = useState(false);
   const [editingSubjectId, setEditingSubjectId] = useState<number | null>(null);
@@ -149,10 +146,10 @@ export const AdminSubjectsTab: React.FC = () => {
   };
 
   const classLevelOptions = useMemo(() => {
-    if (!Array.isArray(classLevels)) return [{ value: '', label: 'Select Pathway' }];
+    const sorted = [...classLevels].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     return [
       { value: '', label: 'Select Pathway' },
-      ...classLevels.map(cl => ({
+      ...sorted.map(cl => ({
         value: cl.id.toString(),
         label: `${cl.name} - ${getClassName(cl.id)}`,
       }))
@@ -171,7 +168,7 @@ export const AdminSubjectsTab: React.FC = () => {
       const levelName = getClassLevelName(subject.classLevelId).toLowerCase();
       const term = searchTerm.toLowerCase();
       return name.includes(term) || levelName.includes(term);
-    });
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [subjects, searchTerm, classLevels]);
 
   if (isLoading) {

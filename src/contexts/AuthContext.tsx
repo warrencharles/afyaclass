@@ -492,16 +492,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       saveAuthToken(fetchedUser.token as string); // Save token to storage
       return fetchedUser;
     } catch (err: any) {
-      console.error('AuthContext: Error refetching user:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        console.log("AuthContext: API: Authentication error (401/403) detected for an unauthenticated request (e.g., login attempt). Not triggering session invalidation.");
-        // Do not clear session here, let the periodic check handle it if it's a background poll
-        // or let the main logout flow handle it if it's an explicit logout.
-        // This prevents premature logout if the token is just expired and a refresh is pending.
+        console.warn("AuthContext: API: Authentication error (401/403) during refetch. Session may have expired.");
       } else {
-        // For non-401/403 errors, do not immediately clear user data.
-        // This prevents premature logout on transient network issues.
-        // The periodic session check or explicit logout will handle actual session invalidation.
+        console.error('AuthContext: Error refetching user:', err);
         console.warn('AuthContext: Refetch user failed due to non-authentication error. User state maintained.', err);
       }
       throw err; // Re-throw the error so calling functions can handle it
