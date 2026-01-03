@@ -56,30 +56,26 @@ export const DashboardPage: React.FC = () => {
     { value: '2', label: 'Semester 2' }
   ], []);
 
-  // Sync filters with user profile updates
+  // Sync filters with user profile updates (Admin-initiated course/level changes)
   useEffect(() => {
     if (user && classLevels.length > 0) {
-      // If course (classType) changed, reset everything to defaults
-      const prevClassType = sessionStorage.getItem('last_class_type');
-      if (prevClassType && prevClassType !== user.classType) {
+      const lastSyncedType = sessionStorage.getItem('last_synced_type');
+      const lastSyncedLevel = sessionStorage.getItem('last_synced_level');
+
+      if (lastSyncedType !== user.classType) {
+        // Course changed or initial load
         setSelectedClassLevel(user.classLevel || '');
         setSelectedSemester('1');
         setSearchTerm('');
-      } else if (!selectedClassLevel && user.classLevel) {
-        // Initial load or first time setting level
-        setSelectedClassLevel(user.classLevel);
-      } else if (user.classLevel && selectedClassLevel !== user.classLevel) {
-        // Handle admin-initiated level change
-        // We only overwrite if the current selection is NOT found in the new course options
-        const isCurrentLevelValid = classLevelOptions.some(l => (l as any).value === selectedClassLevel);
-        if (!isCurrentLevelValid) {
-          setSelectedClassLevel(user.classLevel);
-        }
+      } else if (lastSyncedLevel !== user.classLevel) {
+        // Only level changed
+        setSelectedClassLevel(user.classLevel || '');
       }
 
-      sessionStorage.setItem('last_class_type', user.classType);
+      sessionStorage.setItem('last_synced_type', user.classType);
+      sessionStorage.setItem('last_synced_level', user.classLevel || '');
     }
-  }, [user?.classType, user?.classLevel, classLevels, classLevelOptions]);
+  }, [user?.classType, user?.classLevel, classLevels]);
 
   // Fetch Advertisements
   useEffect(() => {

@@ -49,15 +49,17 @@ export const ContentTab: React.FC<ContentTabProps> = ({
   const classLevelObj = useMemo(() => {
     if (!classLevel || !user?.classType) return undefined;
 
-    // 1. Find the class object that matches user.classType (e.g. 'CMT')
-    const userClass = classes.find(c => c.classCode === user.classType);
+    // 1. Find the class object that matches user.classType (Case-Insensitive)
+    const userClass = classes.find(c => c.classCode?.toLowerCase() === user.classType.toLowerCase());
     if (!userClass) return undefined;
 
     // 2. Find the level scoped by that classId
-    const normalizedSelected = classLevel.toLowerCase().replace(/\s+/g, '');
+    const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalizedSelected = normalize(classLevel);
+
     return classLevels.find(l =>
       Number(l.classId) === Number(userClass.id) &&
-      (l.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected
+      normalize(l.name) === normalizedSelected
     );
   }, [classLevel, classLevels, classes, user?.classType]);
 

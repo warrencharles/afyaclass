@@ -405,25 +405,30 @@ function handle_user_content($requestMethod, $requestedUserId)
             $classLevelName = $user['classLevel'];
             $classTypeCode = $user['classType'];
 
-            $resolvedClassLevelId = null;
-            if ($classLevelName) {
-                // Robust matching: ignore case and spaces
-                $normalizedClassLevel = str_replace(' ', '', strtolower($classLevelName));
-                $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ?");
-                $stmtClassLevel->execute([$normalizedClassLevel]);
-                $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
-                if ($classLevel) {
-                    $resolvedClassLevelId = $classLevel['id'];
-                }
-            }
-
             $resolvedClassId = null;
             if ($classTypeCode) {
-                $stmtClass = $pdo->prepare('SELECT id FROM classes WHERE classCode = ?');
+                $stmtClass = $pdo->prepare('SELECT id FROM classes WHERE LOWER(classCode) = LOWER(?)');
                 $stmtClass->execute([$classTypeCode]);
                 $class = $stmtClass->fetch(PDO::FETCH_ASSOC);
                 if ($class) {
                     $resolvedClassId = $class['id'];
+                }
+            }
+
+            $resolvedClassLevelId = null;
+            if ($classLevelName) {
+                // Robust matching: ignore case and spaces, AND scope by classId if available
+                $normalizedClassLevel = str_replace(' ', '', strtolower($classLevelName));
+                if ($resolvedClassId) {
+                    $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? AND classId = ?");
+                    $stmtClassLevel->execute([$normalizedClassLevel, $resolvedClassId]);
+                } else {
+                    $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ?");
+                    $stmtClassLevel->execute([$normalizedClassLevel]);
+                }
+                $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
+                if ($classLevel) {
+                    $resolvedClassLevelId = $classLevel['id'];
                 }
             }
 

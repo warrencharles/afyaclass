@@ -132,15 +132,17 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
   const currentClassLevel = useMemo(() => {
     if (!selectedClassLevel || !user?.classType) return undefined;
 
-    // 1. Find the class object that matches user.classType (e.g. 'CMT')
-    const userClass = classes.find(c => c.classCode === user.classType);
+    // 1. Find the class object that matches user.classType (Case-Insensitive)
+    const userClass = classes.find(c => c.classCode?.toLowerCase() === user.classType.toLowerCase());
     if (!userClass) return undefined;
 
     // 2. Find the level scoped by that classId
-    const normalizedSelected = selectedClassLevel.toLowerCase().replace(/\s+/g, '');
+    const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalizedSelected = normalize(selectedClassLevel);
+
     return classLevels.find(level =>
       Number(level.classId) === Number(userClass.id) &&
-      (level.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected
+      normalize(level.name) === normalizedSelected
     );
   }, [classLevels, classes, selectedClassLevel, user?.classType]);
 

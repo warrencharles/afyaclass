@@ -1427,7 +1427,7 @@ function handle_admin_update_user($requestMethod, $userId)
 
                     // Auto-resolve classTypeNameFull if classType is being updated
                     if ($key === 'classType' && $value) {
-                        $stmtClass = $pdo->prepare('SELECT name FROM classes WHERE classCode = ?');
+                        $stmtClass = $pdo->prepare('SELECT name FROM classes WHERE LOWER(classCode) = LOWER(?)');
                         $stmtClass->execute([$value]);
                         $classNameFull = $stmtClass->fetchColumn();
                         if ($classNameFull) {
