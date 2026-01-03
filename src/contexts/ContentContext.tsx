@@ -51,7 +51,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setClassLevels([]);
       setIsLoading(false);
     }
-  }, [user?.id, user?.role]); // Depend on user.id and user.role to trigger re-fetch
+  }, [user?.id, user?.role, user?.classType, user?.classLevel]); // Depend on user academic fields to trigger re-fetch
 
   const refetchUserContent = useCallback(async () => {
     if (!user?.id) {

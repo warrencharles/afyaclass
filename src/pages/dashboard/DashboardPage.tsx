@@ -53,12 +53,30 @@ export const DashboardPage: React.FC = () => {
     { value: '2', label: 'Semester 2' }
   ], []);
 
-  // Initialize filters from user profile
+  // Sync filters with user profile updates
   useEffect(() => {
-    if (user?.classLevel && !selectedClassLevel && classLevels.length > 0) {
-      setSelectedClassLevel(user.classLevel);
+    if (user && classLevels.length > 0) {
+      // If course (classType) changed, reset everything to defaults
+      const prevClassType = sessionStorage.getItem('last_class_type');
+      if (prevClassType && prevClassType !== user.classType) {
+        setSelectedClassLevel(user.classLevel || '');
+        setSelectedSemester('1');
+        setSearchTerm('');
+      } else if (!selectedClassLevel && user.classLevel) {
+        // Initial load or first time setting level
+        setSelectedClassLevel(user.classLevel);
+      } else if (user.classLevel && selectedClassLevel !== user.classLevel) {
+        // Handle admin-initiated level change
+        // We only overwrite if the current selection is NOT found in the new course options
+        const isCurrentLevelValid = classLevelOptions.some(l => (l as any).value === selectedClassLevel);
+        if (!isCurrentLevelValid) {
+          setSelectedClassLevel(user.classLevel);
+        }
+      }
+
+      sessionStorage.setItem('last_class_type', user.classType);
     }
-  }, [user, classLevels]);
+  }, [user?.classType, user?.classLevel, classLevels, classLevelOptions]);
 
   // Fetch Advertisements
   useEffect(() => {

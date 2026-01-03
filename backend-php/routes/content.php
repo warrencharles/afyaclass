@@ -407,8 +407,10 @@ function handle_user_content($requestMethod, $requestedUserId)
 
             $resolvedClassLevelId = null;
             if ($classLevelName) {
-                $stmtClassLevel = $pdo->prepare('SELECT id FROM class_levels WHERE name = ?');
-                $stmtClassLevel->execute([$classLevelName]);
+                // Robust matching: ignore case and spaces
+                $normalizedClassLevel = str_replace(' ', '', strtolower($classLevelName));
+                $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ?");
+                $stmtClassLevel->execute([$normalizedClassLevel]);
                 $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
                 if ($classLevel) {
                     $resolvedClassLevelId = $classLevel['id'];
