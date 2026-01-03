@@ -36,7 +36,7 @@ export const ContentTab: React.FC<ContentTabProps> = ({
   hasMaterialAccess,
   onStartMaterialTrial,
 }) => {
-  const { getContentByType, classLevels, subjects } = useContent();
+  const { getContentByType, classLevels, subjects, classes } = useContent();
   const { user, refetchUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -47,18 +47,37 @@ export const ContentTab: React.FC<ContentTabProps> = ({
   }, [isModalOpen, onModalToggle]);
 
   const classLevelObj = useMemo(() => {
-    if (!classLevel) return undefined;
-    const normalizedSelected = classLevel.toLowerCase().replace(/\s+/g, '');
-    return classLevels.find(l => (l.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected);
-  }, [classLevel, classLevels]);
-  const relevantSubjects = useMemo(() => subjects.filter(s => s.classLevelId === classLevelObj?.id && Number(s.semester) === Number(semester)), [subjects, classLevelObj, semester]);
-  const relevantSubjectIds = useMemo(() => relevantSubjects.map(s => s.id), [relevantSubjects]);
+    if (!classLevel || !user?.classType) return undefined;
 
-  const getSubjectName = useCallback((id: number) => subjects.find(s => s.id === id)?.name || 'Unknown', [subjects]);
+    // 1. Find the class object that matches user.classType (e.g. 'CMT')
+    const userClass = classes.find(c => c.classCode === user.classType);
+    if (!userClass) return undefined;
+
+    // 2. Find the level scoped by that classId
+    const normalizedSelected = classLevel.toLowerCase().replace(/\s+/g, '');
+    return classLevels.find(l =>
+      Number(l.classId) === Number(userClass.id) &&
+      (l.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected
+    );
+  }, [classLevel, classLevels, classes, user?.classType]);
+
+  const relevantSubjects = useMemo(() =>
+    subjects.filter(s =>
+      Number(s.classLevelId) === Number(classLevelObj?.id) &&
+      Number(s.semester) === Number(semester)
+    ), [subjects, classLevelObj, semester]);
+
+  const relevantSubjectIds = useMemo(() => relevantSubjects.map(s => Number(s.id)), [relevantSubjects]);
+
+  const getSubjectName = useCallback((id: number) => subjects.find(s => Number(s.id) === Number(id))?.name || 'Unknown', [subjects]);
 
   const filteredContents = useMemo(() => {
     const filtered = getContentByType(contentType).filter(content => {
-      const matchesSubject = selectedSubjectId ? content.subjectId === selectedSubjectId : relevantSubjectIds.includes(content.subjectId);
+      const contentSubId = Number(content.subjectId);
+      const matchesSubject = selectedSubjectId
+        ? contentSubId === Number(selectedSubjectId)
+        : relevantSubjectIds.includes(contentSubId);
+
       if (!searchTerm.trim()) return matchesSubject;
       return matchesSubject && (
         content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -1424,6 +1424,17 @@ function handle_admin_update_user($requestMethod, $userId)
                 if (in_array($key, $allowedFields)) {
                     $fieldsToUpdate[] = "`{$key}` = ?";
                     $values[] = $value === '' ? null : $value;
+
+                    // Auto-resolve classTypeNameFull if classType is being updated
+                    if ($key === 'classType' && $value) {
+                        $stmtClass = $pdo->prepare('SELECT name FROM classes WHERE classCode = ?');
+                        $stmtClass->execute([$value]);
+                        $classNameFull = $stmtClass->fetchColumn();
+                        if ($classNameFull) {
+                            $fieldsToUpdate[] = "`classTypeNameFull` = ?";
+                            $values[] = $classNameFull;
+                        }
+                    }
                 }
             }
 
@@ -1700,6 +1711,8 @@ function handle_terminate_all_other_sessions($requestMethod)
  */
 function handle_validate_token($requestMethod)
 {
+    global $pdo;
+
     if ($requestMethod === 'GET') {
         $headers = getallheaders();
         $authHeader = $headers['Authorization'] ?? '';
@@ -1715,8 +1728,23 @@ function handle_validate_token($requestMethod)
         $decodedToken = validateJwtToken($token);
 
         if ($decodedToken) {
-            http_response_code(200);
-            echo json_encode(['message' => 'Token is valid.', 'valid' => true, 'userId' => $decodedToken->userId]);
+            // Fetch full user profile to ensure client synchronization
+            $stmt = $pdo->prepare('SELECT id, email, username, college, phone, classType, classTypeNameFull, classLevel, role, hasMaterialAccess, materialTrialStartTime, materialTrialEndTime, materialPaidAccessEndTime, hasPendingPayment, isConfirmed FROM users WHERE id = ?');
+            $stmt->execute([$decodedToken->userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user) {
+                // Cast booleans for JSON consistency
+                $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
+                $user['hasPendingPayment'] = (bool) $user['hasPendingPayment'];
+                $user['isConfirmed'] = (bool) $user['isConfirmed'];
+
+                http_response_code(200);
+                echo json_encode(['message' => 'Token is valid.', 'valid' => true, 'user' => $user]);
+            } else {
+                http_response_code(401);
+                echo json_encode(['message' => 'Unauthorized: User not found.', 'valid' => false]);
+            }
         } else {
             http_response_code(401);
             echo json_encode(['message' => 'Unauthorized: Invalid or expired token.', 'valid' => false]);

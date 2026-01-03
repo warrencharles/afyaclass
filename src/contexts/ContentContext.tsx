@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Content, ContentType, Subject, ClassLevel } from '../types';
+import { Content, ContentType, Subject, ClassLevel, Class } from '../types';
 import api from '../utils/api'; // Import the centralized axios instance
 import { useAuth } from './AuthContext'; // Import useAuth
 
@@ -7,6 +7,7 @@ interface ContentContextType {
   contents: Content[];
   subjects: Subject[];
   classLevels: ClassLevel[];
+  classes: Class[];
   isLoading: boolean;
   error: string | null;
   addContent: (content: Omit<Content, 'id' | 'createdAt' | 'updatedAt' | 'description' | 'accessStatus' | 'remainingTrialTime' | 'file'>) => Promise<void>;
@@ -36,6 +37,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [contents, setContents] = useState<Content[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth(); // Get user from AuthContext
@@ -49,6 +51,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setContents([]);
       setSubjects([]);
       setClassLevels([]);
+      setClasses([]);
       setIsLoading(false);
     }
   }, [user?.id, user?.role, user?.classType, user?.classLevel]); // Depend on user academic fields to trigger re-fetch
@@ -87,6 +90,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const fetchPromises = [
         loadSubjects(),
         loadClassLevels(),
+        loadClasses(),
       ];
 
       if (user?.role === 'admin') {
@@ -125,6 +129,17 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('Error fetching class levels:', err);
       setError('Failed to load class levels');
+    }
+  };
+
+  const loadClasses = async () => {
+    try {
+      const response = await api.get('/classes');
+      const data: Class[] = response.data;
+      setClasses(data);
+    } catch (err) {
+      console.error('Error fetching classes:', err);
+      setError('Failed to load classes');
     }
   };
 
@@ -202,15 +217,15 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const getContentBySubject = (subjectId: number) => {
-    return contents.filter(content => content.subjectId === subjectId);
+    return contents.filter(content => Number(content.subjectId) === Number(subjectId));
   };
 
   const getSubjectsByClassLevel = (classLevelId: number) => {
-    return subjects.filter(subject => subject.classLevelId === classLevelId);
+    return subjects.filter(subject => Number(subject.classLevelId) === Number(classLevelId));
   };
 
   const getClassLevelById = (id: number) => {
-    return classLevels.find(level => level.id === id);
+    return classLevels.find(level => Number(level.id) === Number(id));
   };
 
   return (
@@ -219,6 +234,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         contents,
         subjects,
         classLevels,
+        classes,
         isLoading,
         error,
         addContent,

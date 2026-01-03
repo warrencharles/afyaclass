@@ -41,7 +41,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
 
   const [activeTab, setActiveTab] = useState<ContentType>('note');
   const { user, refetchUser, startMaterialTrial } = useAuth();
-  const { classLevels, getSubjectsByClassLevel, isLoading: isContentLoading } = useContent();
+  const { classLevels, classes, getSubjectsByClassLevel, isLoading: isContentLoading } = useContent();
 
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -130,12 +130,19 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
 
   // --- Filtering Logic ---
   const currentClassLevel = useMemo(() => {
-    if (!selectedClassLevel) return undefined;
+    if (!selectedClassLevel || !user?.classType) return undefined;
+
+    // 1. Find the class object that matches user.classType (e.g. 'CMT')
+    const userClass = classes.find(c => c.classCode === user.classType);
+    if (!userClass) return undefined;
+
+    // 2. Find the level scoped by that classId
     const normalizedSelected = selectedClassLevel.toLowerCase().replace(/\s+/g, '');
     return classLevels.find(level =>
+      Number(level.classId) === Number(userClass.id) &&
       (level.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected
     );
-  }, [classLevels, selectedClassLevel]);
+  }, [classLevels, classes, selectedClassLevel, user?.classType]);
 
   const filteredSubjects = useMemo(() => {
     if (!currentClassLevel) return [];

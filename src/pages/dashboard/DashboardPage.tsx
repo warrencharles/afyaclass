@@ -37,16 +37,19 @@ export const DashboardPage: React.FC = () => {
 
   // Auth Context
   const { user, isAuthenticated, isAuthInitialized, logout } = useAuth();
-  const { classLevels } = useContent();
+  const { classLevels, classes } = useContent();
   const navigate = useNavigate();
 
   const classLevelOptions = React.useMemo(() => {
     const userClassType = user?.classType || '';
+    const userClass = classes.find(c => c.classCode === userClassType);
+
     const filteredClassLevels = classLevels
-      .filter(level => userClassType === '' || level.name.startsWith(userClassType));
+      .filter(level => userClass && Number(level.classId) === Number(userClass.id));
+
     const uniqueClassLevels = Array.from(new Set(filteredClassLevels.map(level => level.name))).sort(naturalSort);
     return uniqueClassLevels.map(levelName => ({ value: levelName, label: levelName }));
-  }, [user, classLevels]);
+  }, [user, classLevels, classes]);
 
   const semesterOptions = React.useMemo(() => [
     { value: '1', label: 'Semester 1' },

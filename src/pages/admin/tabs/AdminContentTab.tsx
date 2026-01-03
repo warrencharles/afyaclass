@@ -209,7 +209,7 @@ export const AdminContentTab: React.FC = () => {
 
   const getSubjectName = (subjectId: number | undefined) => {
     if (subjectId === undefined || !Array.isArray(subjects)) return 'N/A';
-    return subjects.find(s => s.id === subjectId)?.name || 'N/A';
+    return subjects.find(s => Number(s.id) === Number(subjectId))?.name || 'N/A';
   };
 
   const classOptions = useMemo(() => {
@@ -222,7 +222,9 @@ export const AdminContentTab: React.FC = () => {
 
   const classLevelOptions = useMemo(() => {
     if (!Array.isArray(classLevels)) return [{ value: '', label: 'Select Level' }];
-    const filtered = classLevels.filter(level => level.classId === formData.classId);
+    const filtered = classLevels.filter(level =>
+      formData.classId === undefined || Number(level.classId) === Number(formData.classId)
+    );
     const sorted = [...filtered].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return [
       { value: '', label: 'Select Level' },
@@ -239,7 +241,7 @@ export const AdminContentTab: React.FC = () => {
   const subjectOptions = useMemo(() => {
     if (!Array.isArray(subjects)) return [{ value: '', label: 'Select Subject' }];
     const filtered = subjects.filter(subject => {
-      const matchesClassLevel = formData.classLevelId === undefined || subject.classLevelId === formData.classLevelId;
+      const matchesClassLevel = formData.classLevelId === undefined || Number(subject.classLevelId) === Number(formData.classLevelId);
       const matchesSemester = formData.semester === null
         ? (subject.semester === null || subject.semester === '')
         : subject.semester === formData.semester;

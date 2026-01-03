@@ -590,12 +590,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             try {
               const validationResponse = await validateToken();
-              if (validationResponse.valid) {
+              if (validationResponse.valid && validationResponse.user) {
                 console.log('AuthContext: Token validated successfully with backend.');
-                setUser(storedUser);
-                setProfile(storedUser);
-                console.log('AuthContext: User state updated from localStorage. User ID:', storedUser.id);
-              } else {
+                // Merge fresh user data with local session identifiers (token & device_id)
+                const updatedUser: User = {
+                  ...validationResponse.user,
+                  token: storedToken,
+                  device_id: storedUser.device_id
+                };
+                setUser(updatedUser);
+                setProfile(updatedUser);
+                saveUser(updatedUser); // Update local storage with fresh academic fields
+                console.log('AuthContext: User state synchronized from backend validation. User ID:', updatedUser.id);
+              }
+              else {
                 console.warn('AuthContext: Token validation failed. Clearing session.');
                 clearAuthToken();
                 clearDeviceId(); // Clear device ID
