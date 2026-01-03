@@ -115,7 +115,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+    <div className="w-full">
       <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-8 sm:mb-10 md:mb-12 text-center tracking-tight leading-tight">
         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-700">Admin Analytics</span> Overview
       </h1>

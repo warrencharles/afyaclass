@@ -347,7 +347,7 @@ const AdminPaymentsTab: React.FC = () => {
             </div>
 
             {activeSubTab === 'proofs' && (
-                <div className="bg-white/70 backdrop-blur-lg border border-white/50 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl shadow-blue-900/5">
+                <div className="p-4 md:p-0">
                     <div className="mb-6">
                         <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Payment Proofs</h2>
                         <p className="text-slate-500 text-xs md:text-sm font-medium">Review manual screenshots from students.</p>
@@ -358,7 +358,7 @@ const AdminPaymentsTab: React.FC = () => {
 
             {activeSubTab === 'automatic' && (
                 <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4">
                         <div className="hidden sm:block">
                             <h2 className="text-xl font-black text-slate-800 tracking-tight">Pesapal History</h2>
                             <p className="text-xs text-slate-500 font-medium">Automated transaction records.</p>
@@ -570,7 +570,7 @@ const AdminPaymentsTab: React.FC = () => {
 
             {activeSubTab === 'subscriptions' && (
                 <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/50 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6">
                         <div className="flex-1 w-full sm:w-auto">
                             <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2 mb-1">
                                 <Zap className="text-amber-500 fill-amber-500" />
@@ -763,7 +763,7 @@ const AdminPaymentsTab: React.FC = () => {
 
             {activeSubTab === 'manual' && (
                 <div className="max-w-3xl mx-auto w-full px-2 md:px-0">
-                    <div className="bg-white md:bg-white/80 backdrop-blur-xl border border-blue-50 md:border-blue-100 rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl shadow-blue-900/10">
+                    <div className="p-6 md:p-10">
                         <div className="flex items-center space-x-4 md:space-x-6 mb-8 md:mb-10">
                             <div className="p-3 md:p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg shadow-blue-500/30 shrink-0">
                                 <ShieldPlus className="text-white w-6 h-6 md:w-8 md:h-8" />

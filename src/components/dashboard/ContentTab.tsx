@@ -46,7 +46,11 @@ export const ContentTab: React.FC<ContentTabProps> = ({
     onModalToggle(isModalOpen);
   }, [isModalOpen, onModalToggle]);
 
-  const classLevelObj = useMemo(() => classLevels.find(l => l.name === classLevel), [classLevel, classLevels]);
+  const classLevelObj = useMemo(() => {
+    if (!classLevel) return undefined;
+    const normalizedSelected = classLevel.toLowerCase().replace(/\s+/g, '');
+    return classLevels.find(l => (l.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected);
+  }, [classLevel, classLevels]);
   const relevantSubjects = useMemo(() => subjects.filter(s => s.classLevelId === classLevelObj?.id && Number(s.semester) === Number(semester)), [subjects, classLevelObj, semester]);
   const relevantSubjectIds = useMemo(() => relevantSubjects.map(s => s.id), [relevantSubjects]);
 

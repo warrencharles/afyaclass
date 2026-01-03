@@ -18,11 +18,6 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8">
-        {/* Integrate the new AnalyticsDashboard component */}
-        <AnalyticsDashboard />
-      </div>
-    </div>
+    <AnalyticsDashboard />
   );
 };

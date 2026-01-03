@@ -222,11 +222,11 @@ export const AdminContentTab: React.FC = () => {
 
   const classLevelOptions = useMemo(() => {
     if (!Array.isArray(classLevels)) return [{ value: '', label: 'Select Level' }];
+    const filtered = classLevels.filter(level => level.classId === formData.classId);
+    const sorted = [...filtered].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return [
       { value: '', label: 'Select Level' },
-      ...classLevels
-        .filter(level => level.classId === formData.classId)
-        .map(level => ({ value: level.id.toString(), label: level.name }))
+      ...sorted.map(level => ({ value: level.id.toString(), label: level.name }))
     ];
   }, [classLevels, formData.classId]);
 

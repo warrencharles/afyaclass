@@ -129,10 +129,13 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
   }, [user, startMaterialTrial, refetchUser, materialTrialRemainingTime]);
 
   // --- Filtering Logic ---
-  const currentClassLevel = useMemo(() =>
-    classLevels.find(level => level.name === selectedClassLevel),
-    [classLevels, selectedClassLevel]
-  );
+  const currentClassLevel = useMemo(() => {
+    if (!selectedClassLevel) return undefined;
+    const normalizedSelected = selectedClassLevel.toLowerCase().replace(/\s+/g, '');
+    return classLevels.find(level =>
+      (level.name || '').toLowerCase().replace(/\s+/g, '') === normalizedSelected
+    );
+  }, [classLevels, selectedClassLevel]);
 
   const filteredSubjects = useMemo(() => {
     if (!currentClassLevel) return [];

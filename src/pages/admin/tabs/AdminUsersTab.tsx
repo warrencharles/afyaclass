@@ -8,6 +8,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Edit, Trash2, Lock, Unlock, Search, Mail, Plus, Users, GraduationCap, Building2, UserPlus, XCircle, Loader2 } from 'lucide-react';
 import { User, Class } from '../../../types';
+import { naturalSort } from '../../../utils/sorting';
 
 export const AdminUsersTab: React.FC = () => {
   const {
@@ -83,7 +84,7 @@ export const AdminUsersTab: React.FC = () => {
   };
 
   const classTypeOptions = useMemo(() => {
-    const sorted = [...(Array.isArray(classes) ? classes : [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sorted = [...(Array.isArray(classes) ? classes : [])].sort((a, b) => naturalSort(a.name || '', b.name || ''));
     return sorted.map(cls => ({
       value: cls.classCode,
       label: cls.name,
@@ -96,7 +97,7 @@ export const AdminUsersTab: React.FC = () => {
     if (!selectedClass) return [];
     return classLevels
       .filter(level => level.classId === selectedClass.id)
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      .sort((a, b) => naturalSort(a.name || '', b.name || ''))
       .map(level => ({ value: level.name, label: level.name }));
   }, [classes, classLevels]);
 
@@ -112,7 +113,7 @@ export const AdminUsersTab: React.FC = () => {
       const matchesFilter = filterRole === 'all' || (filterRole === user.role);
 
       return matchesSearch && matchesFilter;
-    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    }).sort((a, b) => naturalSort(a.username || '', b.username || ''));
   }, [users, searchTerm, filterRole]);
 
   const roleOptions = [

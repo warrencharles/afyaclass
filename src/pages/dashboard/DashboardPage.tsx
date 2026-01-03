@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { LogOut } from 'lucide-react';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
+import { naturalSort } from '../../utils/sorting';
 
 export interface DashboardOutletContext {
   dashboardMainRef: RefObject<HTMLElement>;
@@ -43,7 +44,7 @@ export const DashboardPage: React.FC = () => {
     const userClassType = user?.classType || '';
     const filteredClassLevels = classLevels
       .filter(level => userClassType === '' || level.name.startsWith(userClassType));
-    const uniqueClassLevels = Array.from(new Set(filteredClassLevels.map(level => level.name)));
+    const uniqueClassLevels = Array.from(new Set(filteredClassLevels.map(level => level.name))).sort(naturalSort);
     return uniqueClassLevels.map(levelName => ({ value: levelName, label: levelName }));
   }, [user, classLevels]);
 
