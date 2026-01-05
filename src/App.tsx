@@ -89,7 +89,14 @@ const AppRoutes: React.FC = () => {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected routes */}
-        <Route path="/dashboard/*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} >
+        <Route
+          path="/dashboard/*"
+          element={
+            isAdmin
+              ? <Navigate to="/admin" replace />
+              : <ProtectedRoute><DashboardPage /></ProtectedRoute>
+          }
+        >
           <Route index element={<DashboardContent />} />
           <Route path="profile" element={<DashboardProfilePage />} />
           <Route path="forum" element={<ForumPage />} />
