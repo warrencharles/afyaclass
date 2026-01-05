@@ -97,7 +97,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
             {/* Notification Icon for Admin Desktop */}
             <NotificationIcon />
             <div className="relative">
-              <button 
+              <button
                 onClick={toggleProfileDropdown}
                 className="flex items-center text-white bg-gray-700 px-4 py-2 rounded-xl shadow-lg hover:bg-gray-600 border border-gray-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
                 aria-label="Open admin profile menu"
@@ -107,21 +107,21 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
                 </div>
                 <span className="font-medium hidden sm:inline">My Account</span>
               </button>
-              
+
               {profileDropdownOpen && (
                 <>
                   {/* Backdrop */}
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setProfileDropdownOpen(false)}
                   ></div>
-                  
+
                   {/* Dropdown */}
-                  <div className="absolute right-0 z-20 w-56 mt-2 origin-top-right bg-gray-800 rounded-lg shadow-xl border border-gray-700">
-                    <div className="py-2">
+                  <div className="absolute right-0 z-20 w-56 mt-2 origin-top-right bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+                    <div className="py-2 px-2">
                       <button
                         onClick={handleDashboardClick}
-                        className="flex items-center w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 rounded-md mx-2 transition-colors group"
+                        className="flex items-center w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 rounded-md transition-colors group"
                       >
                         <div className="p-1.5 rounded-md mr-3 bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-md group-hover:scale-110 transition-transform">
                           <Home className="h-4 w-4" />
@@ -130,7 +130,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
                       </button>
                       <button
                         onClick={handleProfileClick}
-                        className="flex items-center w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 rounded-md mx-2 transition-colors group"
+                        className="flex items-center w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 rounded-md transition-colors group"
                       >
                         <div className="p-1.5 rounded-md mr-3 bg-gradient-to-br from-green-500 to-blue-500 text-white shadow-md group-hover:scale-110 transition-transform">
                           <User className="h-4 w-4" />
@@ -139,7 +139,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
                       </button>
                       <button
                         onClick={handleLogoutInitiate}
-                        className="flex items-center w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900 rounded-md mx-2 transition-colors"
+                        className="flex items-center w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900 rounded-md transition-colors"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
                         Sign out
@@ -166,7 +166,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Are you sure you want to sign out?</h3>
           <p className="text-sm text-gray-600 mb-6">You will be securely logged out and need to sign in again to access your account.</p>
-          
+
           {logoutError && (
             <Alert
               variant="error"
@@ -178,14 +178,14 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onToggleSidebar, isSid
           )}
 
           <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancelLogout}
               className="order-2 sm:order-1 border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="danger"
               onClick={handleConfirmLogout}
               className="order-1 sm:order-2 bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-md hover:shadow-lg"

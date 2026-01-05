@@ -233,12 +233,13 @@ export const AdminPage: React.FC = () => {
                         navigate(`/admin?tab=${tab.id}`); // Update URL on tab change
                         if (isMobile) setIsSidebarOpen(false);
                       }}
-                      className={`flex items-center w-full px-4 py-3 text-left transition-all duration-300 rounded-2xl group ${activeTab === tab.id
-                        ? 'bg-gradient-to-r from-primary-500 to-blue-600 text-white shadow-lg transform scale-105'
-                        : 'text-gray-700 hover:bg-gray-50'
+                      className={`flex items-center w-full px-4 py-3 text-left transition-all duration-300 rounded-2xl group ${!isSidebarOpen && !isMobile ? 'justify-center' : ''
+                        } ${activeTab === tab.id
+                          ? 'bg-gradient-to-r from-primary-500 to-blue-600 text-white shadow-lg transform scale-105'
+                          : 'text-gray-700 hover:bg-gray-50'
                         }`}
                     >
-                      <div className={`relative p-2 rounded-xl mr-4 ${activeTab === tab.id
+                      <div className={`relative p-2 rounded-xl ${!isSidebarOpen && !isMobile ? '' : 'mr-4'} ${activeTab === tab.id
                         ? 'bg-white/20'
                         : 'bg-gradient-to-br from-primary-500 to-blue-600 text-white shadow-md group-hover:scale-110 transition-transform'
                         }`}>
