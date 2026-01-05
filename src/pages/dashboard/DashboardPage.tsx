@@ -42,7 +42,7 @@ export const DashboardPage: React.FC = () => {
 
   const classLevelOptions = React.useMemo(() => {
     const userClassType = user?.classType || '';
-    const userClass = classes.find(c => c.classCode === userClassType);
+    const userClass = classes.find(c => c.classCode?.toLowerCase() === userClassType.toLowerCase());
 
     const filteredClassLevels = classLevels
       .filter(level => userClass && Number(level.classId) === Number(userClass.id));

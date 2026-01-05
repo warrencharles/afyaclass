@@ -138,7 +138,9 @@ export const AdminUsersTab: React.FC = () => {
       if (name === 'classType') {
         const selectedClass = classes.find(cls => cls.classCode === value);
         if (selectedClass) {
-          const levelsForClass = classLevels.filter(level => level.classId === selectedClass.id);
+          const levelsForClass = [...classLevels]
+            .filter(level => level.classId === selectedClass.id)
+            .sort((a, b) => naturalSort(a.name || '', b.name || ''));
           newFormData.classLevel = levelsForClass.length > 0 ? levelsForClass[0].name : '';
         } else {
           newFormData.classLevel = '';
