@@ -415,31 +415,38 @@ function handle_user_content($requestMethod, $requestedUserId)
                 }
             }
 
-            $resolvedClassLevelId = null;
+            $resolvedClassLevelIds = [];
             if ($classLevelName) {
                 // Robust matching: ignore case and spaces
                 $normalizedClassLevel = str_replace(' ', '', strtolower($classLevelName));
 
-                // 1. Try scoped search first (Best accuracy)
+                // 1. Find scoped IDs (Best accuracy)
                 if ($resolvedClassId) {
                     $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? AND classId = ?");
                     $stmtClassLevel->execute([$normalizedClassLevel, $resolvedClassId]);
-                    $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
-                    if ($classLevel) {
-                        $resolvedClassLevelId = $classLevel['id'];
+                    $scopedIds = $stmtClassLevel->fetchAll(PDO::FETCH_COLUMN);
+                    if ($scopedIds) {
+                        $resolvedClassLevelIds = array_merge($resolvedClassLevelIds, $scopedIds);
                     }
                 }
 
-                // 2. Fallback to name-only search (Handles legacy data with NULL or 0 classId)
-                if (!$resolvedClassLevelId) {
-                    // We order by classId match to prefer valid associations if multiple levels share a name
-                    $stmtClassLevelFallback = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? ORDER BY (classId = ?) DESC LIMIT 1");
-                    $stmtClassLevelFallback->execute([$normalizedClassLevel, $resolvedClassId ?: 0]);
-                    $classLevelFallback = $stmtClassLevelFallback->fetch(PDO::FETCH_ASSOC);
-                    if ($classLevelFallback) {
-                        $resolvedClassLevelId = $classLevelFallback['id'];
-                    }
+                // 2. Find legacy/duplicate IDs (Handles split-brain data with NULL, 0, or duplicate names)
+                // We fetch ALL matches, not just one, to ensure we catch content on any duplicate level.
+                $stmtClassLevelFallback = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? AND (classId IS NULL OR classId = 0 OR classId != ?)");
+                // Note: We include classId != resolvedClassId to safely catch duplicates that might be misassigned to other IDs if needed, 
+                // but strictly speaking for safety we usually only want NULL/0. 
+                // However, to be maximally resilient for the user's issue, let's just fetch ALL matching names regardless of classId?
+                // No, fetching unmatched classIds might show HIT content to CMT. 
+                // So let's stick to NULL/0 for legacy.
+                $stmtClassLevelFallback = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? AND (classId IS NULL OR classId = 0)");
+                $stmtClassLevelFallback->execute([$normalizedClassLevel]);
+                $legacyIds = $stmtClassLevelFallback->fetchAll(PDO::FETCH_COLUMN);
+
+                if ($legacyIds) {
+                    $resolvedClassLevelIds = array_merge($resolvedClassLevelIds, $legacyIds);
                 }
+
+                $resolvedClassLevelIds = array_unique($resolvedClassLevelIds);
             }
 
             $contentQuery = 'SELECT id, title, type, fileUrl, fileType, videoUrl, classLevelId, subjectId, classId, semester, uploadedBy, createdAt, updatedAt FROM content WHERE 1=1';
@@ -447,14 +454,22 @@ function handle_user_content($requestMethod, $requestedUserId)
 
             if ($resolvedClassId) {
                 // Lenient filtering: Allow content matching by classId OR content with no classId (legacy)
-                // provided it matches the resolvedLevelId later.
                 $contentQuery .= ' AND (classId = :classId OR classId IS NULL OR classId = 0)';
                 $queryParams[':classId'] = $resolvedClassId;
             }
 
-            if ($resolvedClassLevelId) {
-                $contentQuery .= ' AND classLevelId = :classLevelId';
-                $queryParams[':classLevelId'] = $resolvedClassLevelId;
+            if (!empty($resolvedClassLevelIds)) {
+                // Use IN clause to fetch content for ANY of the matching level IDs
+                $inPlaceholders = [];
+                foreach ($resolvedClassLevelIds as $index => $id) {
+                    $paramName = ":clId{$index}";
+                    $inPlaceholders[] = $paramName;
+                    $queryParams[$paramName] = $id;
+                }
+                $contentQuery .= ' AND classLevelId IN (' . implode(',', $inPlaceholders) . ')';
+            } elseif ($classLevelName) {
+                // If a level name was requested but no IDs were found, ensure no content is returned
+                $contentQuery .= ' AND 1=0';
             }
 
             $stmtContent = $pdo->prepare($contentQuery);
