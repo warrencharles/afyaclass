@@ -64,16 +64,27 @@ export const AdminUsersTab: React.FC = () => {
 
   const triggerBulkDelete = () => {
     if (selectedIds.length === 0) return;
+
+    // Filter out admin users
+    const selectedUsers = users.filter(u => selectedIds.includes(u.id));
+    const adminUsers = selectedUsers.filter(u => u.role === 'admin');
+    const nonAdminIds = selectedUsers.filter(u => u.role !== 'admin').map(u => u.id);
+
+    if (adminUsers.length > 0) {
+      showToast(`Cannot delete ${adminUsers.length} admin account(s). Only non-admin users can be bulk deleted.`, 'warning');
+      if (nonAdminIds.length === 0) return;
+    }
+
     setConfirmModal({
       isOpen: true,
       title: 'Bulk Delete Users',
-      message: `Permanently delete ${selectedIds.length} selected users? This cannot be undone.`,
+      message: `Permanently delete ${nonAdminIds.length} selected users? This cannot be undone.${adminUsers.length > 0 ? ` (${adminUsers.length} admin(s) excluded)` : ''}`,
       variant: 'danger',
       onConfirm: async () => {
         try {
-          await bulkDeleteUsers(selectedIds);
+          await bulkDeleteUsers(nonAdminIds);
           setSelectedIds([]);
-          showToast(`${selectedIds.length} users deleted successfully`, 'success');
+          showToast(`${nonAdminIds.length} users deleted successfully`, 'success');
         } catch (error) {
           showToast('Failed to delete some users', 'error');
         } finally {
@@ -188,6 +199,12 @@ export const AdminUsersTab: React.FC = () => {
   };
 
   const triggerDelete = (user: User) => {
+    // Prevent admin deletion
+    if (user.role === 'admin') {
+      showToast('Admin accounts cannot be deleted for security. Change role to student first.', 'warning');
+      return;
+    }
+
     setConfirmModal({
       isOpen: true,
       title: 'Delete Account',

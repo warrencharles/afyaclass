@@ -114,15 +114,15 @@ export const AdminProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="w-28 h-28 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-          <User size={60} className="text-white" />
+      <div className="text-center mb-4">
+        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+          <User size={40} className="text-white" />
         </div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">{editableUser.username}</h3>
-        <p className="text-gray-600">Manage your personal details and account information</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-1">{editableUser.username}</h3>
+        <p className="text-sm text-gray-600">Manage your personal details and account information</p>
       </div>
 
-      <div className="space-y-6 text-left bg-gray-50 p-8 rounded-xl border border-gray-200 shadow-inner">
+      <div className="space-y-4 text-left bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-inner">
         {profileSuccessMessage && (
           <div className="p-3 bg-success-50 border border-success-200 text-success-600 rounded text-sm mb-4">
             {profileSuccessMessage}
