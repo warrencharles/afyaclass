@@ -1415,25 +1415,63 @@ function handle_admin_update_user($requestMethod, $userId)
                 'classType',
                 'classTypeNameFull',
                 'classLevel',
-                'hasMaterialAccess',
-                'hasPendingPayment',
                 'isConfirmed'
+                // Note: hasMaterialAccess and hasPendingPayment are intentionally excluded
+                // to preserve payment access when admin changes user class.
+                // These fields should only be modified via grantMaterialAccess/revokeMaterialAccess.
             ];
+
+            // Pre-process updates to auto-resolve classTypeNameFull and force default classLevel
+            if (isset($updates['classType']) && $updates['classType']) {
+                error_log("Admin update user: Processing classType '{$updates['classType']}' for user {$userId}");
+
+                $stmtClass = $pdo->prepare('SELECT id, name FROM classes WHERE LOWER(classCode) = LOWER(?)');
+                $stmtClass->execute([$updates['classType']]);
+                $classInfo = $stmtClass->fetch(PDO::FETCH_ASSOC);
+
+                if ($classInfo) {
+                    error_log("Admin update user: Found class ID {$classInfo['id']}, name '{$classInfo['name']}'");
+
+                    // 1. Auto-set full class name
+                    $updates['classTypeNameFull'] = $classInfo['name'];
+
+                    // 2. Auto-set default level if not provided or likely invalid
+                    $stmtLevel = $pdo->prepare("SELECT name FROM class_levels WHERE classId = ? ORDER BY name ASC LIMIT 1");
+                    $stmtLevel->execute([$classInfo['id']]);
+                    $defaultLevel = $stmtLevel->fetchColumn();
+
+                    if ($defaultLevel) {
+                        error_log("Admin update user: Default level for class {$classInfo['id']} is '{$defaultLevel}'");
+
+                        $newCode = strtolower($updates['classType']);
+                        $incomingLevel = strtolower($updates['classLevel'] ?? '');
+
+                        error_log("Admin update user: Incoming classLevel: '{$incomingLevel}', newCode: '{$newCode}'");
+
+                        // Heuristic: If incoming level is empty OR doesn't contain the first 2 chars of the new class code
+                        if (empty($incomingLevel) || strpos($incomingLevel, substr($newCode, 0, 2)) === false) {
+                            error_log("Admin update user: Overriding classLevel to default '{$defaultLevel}'");
+                            $updates['classLevel'] = $defaultLevel;
+                        } else {
+                            error_log("Admin update user: Keeping incoming classLevel '{$incomingLevel}'");
+                        }
+                    } else {
+                        error_log("Admin update user: WARNING - No default level found for class ID {$classInfo['id']}");
+                    }
+                } else {
+                    error_log("Admin update user: WARNING - Class not found for classType '{$updates['classType']}'");
+                }
+            }
 
             foreach ($updates as $key => $value) {
                 if (in_array($key, $allowedFields)) {
                     $fieldsToUpdate[] = "`{$key}` = ?";
-                    $values[] = $value === '' ? null : $value;
 
-                    // Auto-resolve classTypeNameFull if classType is being updated
-                    if ($key === 'classType' && $value) {
-                        $stmtClass = $pdo->prepare('SELECT name FROM classes WHERE LOWER(classCode) = LOWER(?)');
-                        $stmtClass->execute([$value]);
-                        $classNameFull = $stmtClass->fetchColumn();
-                        if ($classNameFull) {
-                            $fieldsToUpdate[] = "`classTypeNameFull` = ?";
-                            $values[] = $classNameFull;
-                        }
+                    // Convert boolean fields to integers for MySQL compatibility
+                    if ($key === 'hasMaterialAccess' || $key === 'hasPendingPayment' || $key === 'isConfirmed') {
+                        $values[] = $value ? 1 : 0;
+                    } else {
+                        $values[] = $value === '' ? null : $value;
                     }
                 }
             }
@@ -1468,8 +1506,14 @@ function handle_admin_update_user($requestMethod, $userId)
             $values[] = $userId;
 
             try {
+                error_log("Admin update user: Preparing UPDATE query with " . count($fieldsToUpdate) . " fields for user {$userId}");
+                error_log("Admin update user: SQL: " . $sql);
+                error_log("Admin update user: Values: " . json_encode($values));
+
                 $stmt = $pdo->prepare($sql);
                 $success = $stmt->execute($values);
+
+                error_log("Admin update user: Query executed. Success: " . ($success ? 'true' : 'false') . ", Rows affected: " . $stmt->rowCount());
 
                 if ($success && $stmt->rowCount() > 0) {
                     // TODO: Implement createNotification function

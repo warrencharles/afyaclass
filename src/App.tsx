@@ -73,7 +73,14 @@ const AppRoutes: React.FC = () => {
     <>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/"
+          element={
+            isAuthenticated
+              ? (isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />)
+              : <HomePage />
+          }
+        />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register-success" element={<RegisterSuccessPage />} />
