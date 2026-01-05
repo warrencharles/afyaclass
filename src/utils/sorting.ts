@@ -3,6 +3,16 @@
  * Handles numbers within strings correctly (e.g., "Exam 2" comes before "Exam 10").
  */
 export const naturalSort = (a: string, b: string) => {
+    // Robust fallback: manually extract first number sequence
+    const numA = a.match(/\d+/);
+    const numB = b.match(/\d+/);
+
+    if (numA && numB) {
+        const valA = parseInt(numA[0], 10);
+        const valB = parseInt(numB[0], 10);
+        if (valA !== valB) return valA - valB;
+    }
+
     return a.localeCompare(b, undefined, {
         numeric: true,
         sensitivity: 'base',
