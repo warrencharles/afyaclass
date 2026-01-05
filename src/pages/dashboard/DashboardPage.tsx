@@ -44,8 +44,18 @@ export const DashboardPage: React.FC = () => {
     const userClassType = user?.classType || '';
     const userClass = classes.find(c => c.classCode?.toLowerCase() === userClassType.toLowerCase());
 
-    const filteredClassLevels = classLevels
-      .filter(level => userClass && Number(level.classId) === Number(userClass.id));
+    const filteredClassLevels = classLevels.filter(level => {
+      // 1. Strict match by classId (Preferred)
+      if (userClass && Number(level.classId) === Number(userClass.id)) return true;
+
+      // 2. Lenient match by naming convention (Legacy fallback)
+      // If level name starts with course code (e.g. "CMT") and level has NO classId or classId is 0
+      const code = userClassType.toLowerCase();
+      const name = (level.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (name.startsWith(code) && (!level.classId || Number(level.classId) === 0)) return true;
+
+      return false;
+    });
 
     const uniqueClassLevels = Array.from(new Set(filteredClassLevels.map(level => level.name))).sort(naturalSort);
     return uniqueClassLevels.map(levelName => ({ value: levelName, label: levelName }));

@@ -57,8 +57,16 @@ export const ContentTab: React.FC<ContentTabProps> = ({
     const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const normalizedSelected = normalize(classLevel);
 
-    return classLevels.find(l =>
+    const scopedMatch = classLevels.find(l =>
       Number(l.classId) === Number(userClass.id) &&
+      normalize(l.name) === normalizedSelected
+    );
+
+    if (scopedMatch) return scopedMatch;
+
+    // Fallback search for legacy records without classId
+    return classLevels.find(l =>
+      (!l.classId || Number(l.classId) === 0) &&
       normalize(l.name) === normalizedSelected
     );
   }, [classLevel, classLevels, classes, user?.classType]);

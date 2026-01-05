@@ -140,8 +140,16 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
     const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const normalizedSelected = normalize(selectedClassLevel);
 
-    return classLevels.find(level =>
+    const scopedMatch = classLevels.find(level =>
       Number(level.classId) === Number(userClass.id) &&
+      normalize(level.name) === normalizedSelected
+    );
+
+    if (scopedMatch) return scopedMatch;
+
+    // Fallback search for legacy records without classId
+    return classLevels.find(level =>
+      (!level.classId || Number(level.classId) === 0) &&
       normalize(level.name) === normalizedSelected
     );
   }, [classLevels, classes, selectedClassLevel, user?.classType]);

@@ -417,31 +417,44 @@ function handle_user_content($requestMethod, $requestedUserId)
 
             $resolvedClassLevelId = null;
             if ($classLevelName) {
-                // Robust matching: ignore case and spaces, AND scope by classId if available
+                // Robust matching: ignore case and spaces
                 $normalizedClassLevel = str_replace(' ', '', strtolower($classLevelName));
+
+                // 1. Try scoped search first (Best accuracy)
                 if ($resolvedClassId) {
                     $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? AND classId = ?");
                     $stmtClassLevel->execute([$normalizedClassLevel, $resolvedClassId]);
-                } else {
-                    $stmtClassLevel = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ?");
-                    $stmtClassLevel->execute([$normalizedClassLevel]);
+                    $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
+                    if ($classLevel) {
+                        $resolvedClassLevelId = $classLevel['id'];
+                    }
                 }
-                $classLevel = $stmtClassLevel->fetch(PDO::FETCH_ASSOC);
-                if ($classLevel) {
-                    $resolvedClassLevelId = $classLevel['id'];
+
+                // 2. Fallback to name-only search (Handles legacy data with NULL or 0 classId)
+                if (!$resolvedClassLevelId) {
+                    // We order by classId match to prefer valid associations if multiple levels share a name
+                    $stmtClassLevelFallback = $pdo->prepare("SELECT id FROM class_levels WHERE REPLACE(LOWER(name), ' ', '') = ? ORDER BY (classId = ?) DESC LIMIT 1");
+                    $stmtClassLevelFallback->execute([$normalizedClassLevel, $resolvedClassId ?: 0]);
+                    $classLevelFallback = $stmtClassLevelFallback->fetch(PDO::FETCH_ASSOC);
+                    if ($classLevelFallback) {
+                        $resolvedClassLevelId = $classLevelFallback['id'];
+                    }
                 }
             }
 
             $contentQuery = 'SELECT id, title, type, fileUrl, fileType, videoUrl, classLevelId, subjectId, classId, semester, uploadedBy, createdAt, updatedAt FROM content WHERE 1=1';
             $queryParams = [];
 
-            if ($resolvedClassLevelId !== null) {
-                $contentQuery .= ' AND classLevelId = ?';
-                $queryParams[] = $resolvedClassLevelId;
+            if ($resolvedClassId) {
+                // Lenient filtering: Allow content matching by classId OR content with no classId (legacy)
+                // provided it matches the resolvedLevelId later.
+                $contentQuery .= ' AND (classId = :classId OR classId IS NULL OR classId = 0)';
+                $queryParams[':classId'] = $resolvedClassId;
             }
-            if ($resolvedClassId !== null) {
-                $contentQuery .= ' AND classId = ?';
-                $queryParams[] = $resolvedClassId;
+
+            if ($resolvedClassLevelId) {
+                $contentQuery .= ' AND classLevelId = :classLevelId';
+                $queryParams[':classLevelId'] = $resolvedClassLevelId;
             }
 
             $stmtContent = $pdo->prepare($contentQuery);
