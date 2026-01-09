@@ -430,7 +430,7 @@ function handle_user_content($requestMethod, $requestedUserId)
             $stmtContent->execute($queryParams);
             $contentRows = $stmtContent->fetchAll(PDO::FETCH_ASSOC);
 
-            $processedContent = array_map(function ($content) use ($hasMaterialAccess, $materialTrialStartTime, $materialTrialEndTime, $materialPaidAccessEndTime) {
+            $processedContent = array_map(function ($content) use ($hasMaterialAccess, $materialTrialStartTime, $materialTrialEndTime, $materialPaidAccessEndTime, $pdo) {
                 // Determine the base URL for uploads
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
                 $publicBaseUrl = $protocol . $_SERVER['HTTP_HOST'] . '/backend-php/public';
@@ -456,8 +456,22 @@ function handle_user_content($requestMethod, $requestedUserId)
                 $now = new DateTime('now', new DateTimeZone('UTC'));
                 $nowTimestamp = $now->getTimestamp();
 
+                // Check for global free access
+                try {
+                    $stmtSettings = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'global_free_access'");
+                    $stmtSettings->execute();
+                    $globalFreeAccess = $stmtSettings->fetchColumn();
+                    if ($globalFreeAccess === 'true') {
+                        $accessStatus = 'unlocked';
+                        // Optionally set a large remaining time or indicator
+                        $remainingPaidAccessTime = 31536000; // 1 year in seconds, effectively unlimited
+                    }
+                } catch (PDOException $e) {
+                    error_log("Error checking global free access: " . $e->getMessage());
+                }
+
                 // Check for paid access first
-                if ($materialPaidAccessEndTime) {
+                if ($accessStatus !== 'unlocked' && $materialPaidAccessEndTime) {
                     try {
                         $paidAccessEnd = new DateTime($materialPaidAccessEndTime, new DateTimeZone('UTC'));
                         if ($paidAccessEnd > $now) {

@@ -223,4 +223,15 @@ export const manageSubscription = async (data: { userId: number; action: 'extend
   return response.data;
 };
 
+// System Settings Management
+export const fetchSystemSettings = async (): Promise<Record<string, any>> => {
+  const response = await axiosClient.get('/admin/settings');
+  return response.data;
+};
+
+export const updateSystemSettings = async (key: string, value: any) => {
+  const response = await axiosClient.post('/admin/settings', { key, value });
+  return response.data;
+};
+
 export default axiosClient; // Export the new axiosClient as default

@@ -11,6 +11,7 @@ import { AdminAdvertisementsTab } from './tabs/AdminAdvertisementsTab';
 import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import { AdminForumTab } from './tabs/AdminForumTab'; // Import AdminForumTab
 import AdminQueriesTab from './tabs/AdminQueriesTab'; // Import AdminQueriesTab
+import { AdminSettingsTab } from './tabs/AdminSettingsTab'; // Import AdminSettingsTab
 import { Users, BookOpen, Layers, GraduationCap, FileText, Image, Home, User, Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, Shield, UserCog, Bell, DollarSign, MessageSquare, MessageCircleQuestion } from 'lucide-react'; // Removed Video icon
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -19,7 +20,7 @@ import { AdminProfilePage } from './AdminProfilePage';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import { fetchUnreadChatConversationsCount } from '../../utils/api'; // Import API function to fetch unread conversations count
 
-type AdminTab = 'dashboard' | 'users' | 'classes' | 'classLevels' | 'subjects' | 'content' | 'advertisements' | 'payments' | 'forum' | 'queries' | 'profile'; // Reverted 'manageContent' to 'content' and removed 'uploadContent'
+type AdminTab = 'dashboard' | 'users' | 'classes' | 'classLevels' | 'subjects' | 'content' | 'advertisements' | 'payments' | 'forum' | 'queries' | 'settings' | 'profile'; // Added 'settings'
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -124,6 +125,7 @@ export const AdminPage: React.FC = () => {
     { id: 'payments' as AdminTab, label: 'Payment Management', icon: DollarSign, description: 'Review proofs, monitor logs, and grant access' },
     { id: 'forum' as AdminTab, label: 'Forum', icon: MessageSquare, description: 'Manage forum discussions and topics' },
     { id: 'queries' as AdminTab, label: 'Queries', icon: MessageCircleQuestion, description: 'Review user chat queries', notificationCount: unreadQueriesCount },
+    { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, description: 'Global system configuration' },
     { id: 'profile' as AdminTab, label: 'Profile', icon: User, description: 'Manage your personal details' },
   ];
 
@@ -149,6 +151,8 @@ export const AdminPage: React.FC = () => {
         return <AdminForumTab />;
       case 'queries':
         return <AdminQueriesTab />;
+      case 'settings':
+        return <AdminSettingsTab />;
       case 'profile':
         return <AdminProfilePage />;
       default:

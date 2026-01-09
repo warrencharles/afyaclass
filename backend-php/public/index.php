@@ -109,6 +109,7 @@ require_once __DIR__ . '/../routes/pesapal.php';
 require_once __DIR__ . '/../routes/analytics.php';
 require_once __DIR__ . '/../routes/payment.php'; // Include the payment routes
 require_once __DIR__ . '/../routes/notifications.php'; // Include the notifications routes
+require_once __DIR__ . '/../routes/settings.php'; // Include the settings routes
 require_once __DIR__ . '/../utils/file_handler.php'; // Include the new file handler
 
 // Ensure any buffered output is cleaned before sending JSON response
@@ -301,6 +302,9 @@ try {
             break;
         case '/admin/manual-grant':
             handle_admin_manual_grant($requestMethod);
+            break;
+        case '/admin/settings':
+            handle_admin_system_settings($requestMethod);
             break;
         case '/admin/subscriptions':
             handle_admin_active_subscriptions($requestMethod);

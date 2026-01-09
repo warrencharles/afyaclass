@@ -83,6 +83,22 @@ function applyMigrations($pdo) {
     } else {
         // echo "'materialTrialEndTime' already exists in 'users' table. No migration needed.\n"; // Suppress output
     }
+
+    // Initialize system_settings table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(50) UNIQUE NOT NULL,
+        setting_value VARCHAR(255) NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
+    // Seed default global_free_access setting if not exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE setting_key = 'global_free_access'");
+    $stmt->execute();
+    if ($stmt->fetchColumn() == 0) {
+        $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_free_access', 'false')");
+        $stmt->execute();
+    }
 }
 
 // Execute initialization and migrations
