@@ -76,41 +76,43 @@ export const AdminSettingsTab: React.FC = () => {
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6">
-                    <div className="flex items-start justify-between">
-                        <div className="flex gap-4">
-                            <div className={`p-3 rounded-lg ${isGlobalFreeAccessEnabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
-                                {isGlobalFreeAccessEnabled ? <Unlock size={24} /> : <Lock size={24} />}
+                <div className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-6">
+                        <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                            <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${isGlobalFreeAccessEnabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+                                {isGlobalFreeAccessEnabled ? <Unlock size={20} className="sm:w-6 sm:h-6" /> : <Lock size={20} className="sm:w-6 sm:h-6" />}
                             </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">Global Free Access</h3>
-                                <p className="text-gray-600 mt-1 max-w-2xl">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Global Free Access</h3>
+                                <p className="text-sm sm:text-base text-gray-600 mt-1">
                                     When enabled, <strong>all registered users</strong> will have full access to all materials, bypassing payment checks.
                                     Existing payment records are preserved. Use this for special events or free trial periods.
                                 </p>
                                 {isGlobalFreeAccessEnabled && (
-                                    <div className="mt-3 flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-md text-sm">
-                                        <AlertTriangle size={16} />
+                                    <div className="mt-3 flex items-start gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-md text-xs sm:text-sm">
+                                        <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
                                         <span>Warning: Free access is currently active for everyone.</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => handleToggle('global_free_access', isGlobalFreeAccessEnabled)}
-                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${isGlobalFreeAccessEnabled ? 'bg-green-500' : 'bg-gray-300'
-                                }`}
-                        >
-                            <span className="sr-only">Toggle global free access</span>
-                            <span
-                                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${isGlobalFreeAccessEnabled ? 'translate-x-7' : 'translate-x-1'
+                        <div className="flex items-center justify-between w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 sm:border-none">
+                            <span className="text-sm font-medium text-gray-700 sm:hidden">Enable Access</span>
+                            <button
+                                onClick={() => handleToggle('global_free_access', isGlobalFreeAccessEnabled)}
+                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${isGlobalFreeAccessEnabled ? 'bg-green-500' : 'bg-gray-300'
                                     }`}
-                            />
-                        </button>
+                            >
+                                <span className="sr-only">Toggle global free access</span>
+                                <span
+                                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${isGlobalFreeAccessEnabled ? 'translate-x-7' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 };
