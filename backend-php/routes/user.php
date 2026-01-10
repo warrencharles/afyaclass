@@ -211,7 +211,8 @@ function handle_login($requestMethod)
                     'classTypeNameFull' => $user['classTypeNameFull'],
                     'classLevel' => $user['classLevel'],
                     'role' => $user['role'],
-                    'hasMaterialAccess' => (bool) $user['hasMaterialAccess'],
+                    'role' => $user['role'],
+                    'hasMaterialAccess' => isGlobalFreeAccessEnabled() ? true : (bool) $user['hasMaterialAccess'],
                     'materialTrialStartTime' => $user['materialTrialStartTime'],
                     'materialTrialEndTime' => $user['materialTrialEndTime'], // Ensure this is included
                     'materialPaidAccessEndTime' => $user['materialPaidAccessEndTime'],
@@ -1143,6 +1144,11 @@ function handle_get_user($requestMethod, $userId)
             error_log("handle_get_user: Processing user data for ID: {$userId}.");
             $user['hasPendingPayment'] = (bool) $user['hasPendingPayment'];
             $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
+
+            // Check for Global Free Access override
+            if (isGlobalFreeAccessEnabled()) {
+                $user['hasMaterialAccess'] = true;
+            }
             $user['isConfirmed'] = (bool) $user['isConfirmed']; // Explicitly cast to boolean
 
             // Removed profilePictureUrl processing as per user feedback.

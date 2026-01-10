@@ -5,6 +5,7 @@ import { useContent } from '../../contexts/ContentContext';
 import { ContentType, Subject, Advertisement } from '../../types';
 import { FileText, Book, File, Clock, ClipboardList, Book as BookIcon, ChevronLeft, Video, AlertTriangle, Search, BookOpen } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useToast } from '../../contexts/ToastContext'; // Import Toast
 // Removed Card import
 import { AdvertisementBanner } from './AdvertisementBanner';
 import { ContentTab } from './ContentTab';
@@ -47,6 +48,38 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const learningMaterialsRef = useRef<HTMLDivElement>(null);
   const [timeTick, setTimeTick] = useState(0);
+  const { addToast } = useToast();
+  const prevHasMaterialAccess = useRef<boolean | undefined>(user?.hasMaterialAccess);
+
+  // --- Real-time Polling & Notifications ---
+  useEffect(() => {
+    // Poll user data every 30 seconds to check for admin access toggle
+    const pollInterval = setInterval(async () => {
+      const updatedUser = await refetchUser();
+
+      // Check for access status change
+      if (updatedUser && prevHasMaterialAccess.current !== undefined) {
+        if (!prevHasMaterialAccess.current && updatedUser.hasMaterialAccess) {
+          addToast('Global Free Access has been enabled by the admin!', 'success');
+        } else if (prevHasMaterialAccess.current && !updatedUser.hasMaterialAccess) {
+          addToast('Global Free Access has ended.', 'info');
+        }
+      }
+
+      // Update ref *after* check
+      if (updatedUser) {
+        prevHasMaterialAccess.current = updatedUser.hasMaterialAccess;
+      }
+
+    }, 10000); // Poll every 10 seconds for faster feedback (as requested "instant" - though 10s is reasonable load)
+
+    return () => clearInterval(pollInterval);
+  }, [refetchUser, addToast]);
+
+  // Update ref when user object changes naturally (e.g. manual refetch or initial load)
+  useEffect(() => {
+    prevHasMaterialAccess.current = user?.hasMaterialAccess;
+  }, [user?.hasMaterialAccess]);
 
   // --- Logic for Access Control (Overlay) ---
   const handleAccessEnd = useCallback(() => {

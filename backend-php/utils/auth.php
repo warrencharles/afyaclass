@@ -99,6 +99,24 @@ function validateJwtToken(string $token): ?object
 }
 
 /**
+ * Checks if Global Free Access is enabled in system settings.
+ * @return bool
+ */
+function isGlobalFreeAccessEnabled(): bool
+{
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'global_free_access'");
+        $stmt->execute();
+        $value = $stmt->fetchColumn();
+        return $value === 'true';
+    } catch (PDOException $e) {
+        error_log("Error checking global free access: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Authenticates the user based on the Authorization header (JWT).
  * Returns the user array if authenticated, otherwise null.
  * This function now strictly relies on JWT and session validation.
@@ -138,6 +156,11 @@ function authenticate()
             $user['hasPendingPayment'] = (bool) $user['hasPendingPayment'];
             $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
             $user['isConfirmed'] = (bool) $user['isConfirmed'];
+
+            // Check for Global Free Access override
+            if (isGlobalFreeAccessEnabled()) {
+                $user['hasMaterialAccess'] = true;
+            }
 
             // Format all date/time fields to ISO 8601 UTC
             $dateFields = [

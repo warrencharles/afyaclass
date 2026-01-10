@@ -45,6 +45,16 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ initialTimeInSeconds, o
   const messagePrefix = isPaidAccess ? 'Access ends in:' : 'Trial ends in:';
   const endedMessage = isPaidAccess ? 'Access ended!' : 'Trial ended!';
 
+  // Global Free Access Case: User has "Paid" (Unlimited) access but time is 0 (expired or null date)
+  if (isPaidAccess && timeRemaining <= 0) {
+    return (
+      <div className="flex items-center gap-2 text-green-800 bg-white/60 border border-green-200/50 px-3 py-1.5 rounded-lg shadow-sm w-fit">
+        <Clock className="h-4 w-4 text-green-600" />
+        <span className="font-bold text-green-700 text-xs sm:text-sm whitespace-nowrap">Free Access</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 text-primary-800 bg-white/60 border border-primary-200/50 px-3 py-1.5 rounded-lg shadow-sm w-fit">
       <Clock className="h-4 w-4 text-primary-600" />
