@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
-import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+import { Modal } from '../../../components/ui/Modal';
 import { Edit, Trash2, Plus, Layers, Search, XCircle, GraduationCap, MapPin, Loader2 } from 'lucide-react';
 import { ClassLevel } from '../../../types';
 import { naturalSort } from '../../../utils/sorting';
@@ -204,17 +204,6 @@ export const AdminClassLevelsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Select All Toggle */}
-      <div className="flex items-center space-x-2 px-2">
-        <input
-          type="checkbox"
-          checked={filteredClassLevels.length > 0 && selectedIds.length === filteredClassLevels.length}
-          onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select All {filteredClassLevels.length > 0 && `(${filteredClassLevels.length})`}</span>
-      </div>
-
       {isAddFormVisible && (
         <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center">
@@ -228,60 +217,81 @@ export const AdminClassLevelsTab: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredClassLevels.length === 0 ? (
-          <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/80 border-dashed">
-            <Layers size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-500 font-black uppercase tracking-widest">No routes mapped</p>
-          </div>
-        ) : filteredClassLevels.map(level => (
-          <Card key={level.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 backdrop-blur-md rounded-[2rem] overflow-hidden border ${selectedIds.includes(level.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'bg-white/80 border-white/40'}`}>
-            <div className="absolute top-4 left-4 z-10">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(level.id)}
-                onChange={() => toggleSelection(level.id)}
-                className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
-              />
-            </div>
-            <div className="p-5 pl-12 flex justify-between items-center text-slate-800">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-black shadow-inner">
-                  {(level.name || '?').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-black text-sm">{level.name}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">Level Segment</p>
-                </div>
-              </div>
-              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => toggleEditForm(level)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit size={14} /></button>
-                <button onClick={() => triggerDelete(level)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /></button>
-              </div>
-            </div>
-            <CardContent className="p-5 pt-0">
-              <div className="flex items-center text-[10px] font-black text-slate-500 bg-slate-50/50 p-2.5 rounded-xl">
-                <MapPin size={10} className="mr-2 text-blue-500" />
-                <span>Class: {getClassName(level.classId)}</span>
-              </div>
-            </CardContent>
-
-            {editingLevelId === level.id && (
-              <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-xl p-5 overflow-y-auto animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-black text-slate-800 text-sm">Modify Level</h4>
-                  <button onClick={() => setEditingLevelId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={18} /></button>
-                </div>
-                <div className="space-y-4">
-                  <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth />
-                  <Select options={classOptions} value={formData.classId?.toString() || ''} onChange={val => handleSelectChange('classId', val)} fullWidth />
-                  <Button onClick={handleUpdateLevel} fullWidth className="bg-blue-600 text-white font-black py-3.5 rounded-xl shadow-xl shadow-blue-200">Save Configuration</Button>
-                </div>
-              </div>
-            )}
-          </Card>
-        ))}
+      {/* Table View */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-3xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-4 text-left w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredClassLevels.length > 0 && selectedIds.length === filteredClassLevels.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Level Name</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Parent Class</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredClassLevels.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No levels found.
+                  </td>
+                </tr>
+              ) : (
+                filteredClassLevels.map(level => (
+                  <tr key={level.id} className={`group hover:bg-blue-50/30 transition-colors ${selectedIds.includes(level.id) ? 'bg-blue-50/80' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(level.id)}
+                        onChange={() => toggleSelection(level.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-bold text-slate-800 text-sm">{level.name}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-bold">
+                        {getClassName(level.classId)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => toggleEditForm(level)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                        <button onClick={() => triggerDelete(level)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Edit Level Modal */}
+      <Modal
+        isOpen={!!editingLevelId}
+        onClose={() => setEditingLevelId(null)}
+        title="Modify Level"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth label="Level Name" />
+          <Select options={classOptions} value={formData.classId?.toString() || ''} onChange={val => handleSelectChange('classId', val)} fullWidth label="Parent Class" />
+          <div className="pt-2 flex gap-3">
+            <Button onClick={() => setEditingLevelId(null)} className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200">Cancel</Button>
+            <Button onClick={handleUpdateLevel} className="flex-1 bg-blue-600 text-white shadow-lg shadow-blue-200">Save Configuration</Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}

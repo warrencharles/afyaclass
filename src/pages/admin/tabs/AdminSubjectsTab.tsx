@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
-import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+import { Modal } from '../../../components/ui/Modal';
 import { Edit, Trash2, Plus, GraduationCap, Search, BookOpen, Loader2, MapPin, XCircle } from 'lucide-react';
 import { Subject } from '../../../types';
 import { naturalSort } from '../../../utils/sorting';
@@ -225,17 +225,6 @@ export const AdminSubjectsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Select All Toggle */}
-      <div className="flex items-center space-x-2 px-2">
-        <input
-          type="checkbox"
-          checked={filteredSubjects.length > 0 && selectedIds.length === filteredSubjects.length}
-          onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select All {filteredSubjects.length > 0 && `(${filteredSubjects.length})`}</span>
-      </div>
-
       {isAddFormVisible && (
         <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center">
@@ -252,80 +241,87 @@ export const AdminSubjectsTab: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredSubjects.length === 0 ? (
-          <div className="col-span-full py-20 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/80 border-dashed text-center">
-            <GraduationCap size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-500 font-black uppercase tracking-widest">No subjects found</p>
-          </div>
-        ) : (
-          filteredSubjects.map(subject => (
-            <Card key={subject.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 bg-white hover:shadow-xl transition-all duration-500 rounded-[2rem] overflow-hidden border ${selectedIds.includes(subject.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'border-slate-100'}`}>
-              <div className="p-3 border-b border-slate-50 flex items-start gap-3">
-                <div className="flex-shrink-0 pt-0.5">
+      {/* Table View */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-3xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-4 text-left w-12">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(subject.id)}
-                    onChange={() => toggleSelection(subject.id)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
+                    checked={filteredSubjects.length > 0 && selectedIds.length === filteredSubjects.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
-                </div>
-                <div className="flex-shrink-0 flex items-center justify-center p-1.5 bg-white rounded-xl shadow-sm border border-slate-100">
-                  <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm">
-                    {(subject.name || '?').charAt(0).toUpperCase()}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-black text-slate-800 text-sm leading-snug mb-1">{subject.name}</h3>
-                  <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                    <MapPin size={10} className="mr-1 flex-shrink-0" />
-                    <span className="truncate">{getClassLevelName(subject.classLevelId)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <CardContent className="p-4 pt-3">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Semester</p>
-                    <p className="text-sm font-bold text-slate-700">Sem {subject.semester}</p>
-                  </div>
-                  <div className="space-y-0.5 text-right">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Program</p>
-                    <p className="text-sm font-bold text-slate-700 truncate">{getClassName(subject.classLevelId)}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-3 border-t border-slate-50">
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">
-                    Subject Unit
-                  </span>
-
-                  <div className="flex gap-1">
-                    <button onClick={() => toggleEditForm(subject)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all active:scale-95" title="Edit"><Edit size={18} /></button>
-                    <button onClick={() => triggerDelete(subject)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95" title="Delete"><Trash2 size={18} /></button>
-                  </div>
-                </div>
-              </CardContent>
-
-              {editingSubjectId === subject.id && (
-                <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-xl p-5 overflow-y-auto animate-in fade-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-black text-slate-800 text-sm">Update Subject</h4>
-                    <button onClick={() => setEditingSubjectId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={18} /></button>
-                  </div>
-                  <div className="space-y-4">
-                    <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth placeholder="Name" />
-                    <Select options={classLevelOptions} value={formData.classLevelId?.toString() || ''} onChange={val => handleSelectChange('classLevelId', val)} fullWidth />
-                    <Select options={semesterOptions} value={formData.semester || '1'} onChange={val => handleSelectChange('semester', val)} fullWidth />
-                    <Button onClick={handleUpdateSubject} fullWidth className="bg-blue-600 text-white font-black py-3 rounded-xl shadow-xl shadow-blue-200">Save Changes</Button>
-                  </div>
-                </div>
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Subject Name</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Class Level</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Semester</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredSubjects.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No subjects found.
+                  </td>
+                </tr>
+              ) : (
+                filteredSubjects.map(subject => (
+                  <tr key={subject.id} className={`group hover:bg-blue-50/30 transition-colors ${selectedIds.includes(subject.id) ? 'bg-blue-50/80' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(subject.id)}
+                        onChange={() => toggleSelection(subject.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-black text-slate-800 text-sm">{subject.name}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center text-xs font-bold text-slate-500">
+                        <MapPin size={12} className="mr-1.5 text-blue-400" />
+                        {getClassLevelName(subject.classLevelId)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-xs font-bold text-slate-600">Sem {subject.semester}</span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => toggleEditForm(subject)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                        <button onClick={() => triggerDelete(subject)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-            </Card>
-          ))
-        )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Edit Subject Modal */}
+      <Modal
+        isOpen={!!editingSubjectId}
+        onClose={() => setEditingSubjectId(null)}
+        title="Update Subject"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth placeholder="Name" label="Subject Name" />
+          <Select options={classLevelOptions} value={formData.classLevelId?.toString() || ''} onChange={val => handleSelectChange('classLevelId', val)} fullWidth label="Class Level" />
+          <Select options={semesterOptions} value={formData.semester || '1'} onChange={val => handleSelectChange('semester', val)} fullWidth label="Semester" />
+          <div className="pt-2 flex gap-3">
+            <Button onClick={() => setEditingSubjectId(null)} className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200">Cancel</Button>
+            <Button onClick={handleUpdateSubject} className="flex-1 bg-blue-600 text-white shadow-lg shadow-blue-200">Save Changes</Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}

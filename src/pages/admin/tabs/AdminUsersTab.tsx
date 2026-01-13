@@ -1,14 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
-import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Edit, Trash2, Lock, Unlock, Search, Mail, Plus, Users, GraduationCap, Building2, UserPlus, XCircle, Loader2 } from 'lucide-react';
+import { Modal } from '../../../components/ui/Modal';
+import { Edit, Trash2, Lock, Unlock, Search, Mail, Plus, Users, GraduationCap, Building2, UserPlus, XCircle, Loader2, FileSpreadsheet, FileText, Phone } from 'lucide-react';
 import { User, Class } from '../../../types';
 import { naturalSort } from '../../../utils/sorting';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const AdminUsersTab: React.FC = () => {
   const {
@@ -99,6 +102,7 @@ export const AdminUsersTab: React.FC = () => {
     return sorted.map(cls => ({
       value: cls.classCode,
       label: cls.name,
+      id: cls.id // Add ID for filtering levels
     }));
   }, [classes]);
 
@@ -118,9 +122,10 @@ export const AdminUsersTab: React.FC = () => {
       const uName = (user.username || '').toLowerCase();
       const uEmail = (user.email || '').toLowerCase();
       const uCol = (user.college || '').toLowerCase();
+      const uPhone = (user.phone || '').toLowerCase();
       const term = searchTerm.toLowerCase();
 
-      const matchesSearch = uName.includes(term) || uEmail.includes(term) || uCol.includes(term);
+      const matchesSearch = uName.includes(term) || uEmail.includes(term) || uCol.includes(term) || uPhone.includes(term);
       const matchesFilter = filterRole === 'all' || (filterRole === user.role);
 
       return matchesSearch && matchesFilter;
@@ -175,6 +180,7 @@ export const AdminUsersTab: React.FC = () => {
         email: '',
         username: '',
         college: '',
+        phone: '', // Initialize phone
         classType: defaultClassType as Class['classCode'],
         classLevel: defaultClassLevel,
         role: 'student',
@@ -237,8 +243,6 @@ export const AdminUsersTab: React.FC = () => {
       if (editPassword && editPassword !== confirmEditPassword) throw new Error('Passwords mismatch');
 
       // Sanitize data to include ONLY updatable fields
-      // This prevents sending read-only fields (like id, createdAt, etc.) which crash the backend
-      // RESTRICTED LIST: Removed isConfirmed, hasPendingPayment, classTypeNameFull to avoid backend crashes on mismatch
       const allowedFields = [
         'email', 'username', 'role', 'college', 'phone',
         'classType', 'classLevel',
@@ -249,11 +253,7 @@ export const AdminUsersTab: React.FC = () => {
       allowedFields.forEach(field => {
         if (field in formData) {
           const value = formData[field as keyof User];
-          // Handle null vs undefined for optional fields
           if (value === null) {
-            // For optional fields in User type (like phone), we might need undefined instead of null
-            // But backend usually expects null for "empty".
-            // We cast to any to bypass strict TS check if we are sure backend handles null
             (updatedData as any)[field] = null;
           } else {
             (updatedData as any)[field] = value;
@@ -270,6 +270,56 @@ export const AdminUsersTab: React.FC = () => {
     }
   };
 
+  const exportToExcel = () => {
+    const data = filteredUsers.map(user => ({
+      Username: user.username,
+      Email: user.email,
+      Phone: user.phone || 'N/A',
+      College: user.college || 'N/A',
+      Role: user.role,
+      'Class Type': user.classType,
+      'Class Level': user.classLevel,
+      'Joined': new Date(user.createdAt || Date.now()).toLocaleDateString()
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    XLSX.writeFile(workbook, 'AfyaHub_Users.xlsx');
+    showToast('Users exported to Excel', 'success');
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text('AfyaHub Users Directory', 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    const tableColumn = ["Username", "Email", "Phone", "College", "Role", "Class"];
+    const tableRows = filteredUsers.map(user => [
+      user.username,
+      user.email,
+      user.phone || 'N/A',
+      user.college || 'N/A',
+      user.role,
+      `${user.classType} - ${user.classLevel}`
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+
+    doc.save('AfyaHub_Users.pdf');
+    showToast('Users exported to PDF', 'success');
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -281,25 +331,41 @@ export const AdminUsersTab: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-6 pb-20 md:pb-0">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Accounts</h2>
-          <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Platform Membership</p>
+          <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Platform Membership Management</p>
         </div>
-        <button
-          onClick={toggleAddForm}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-black transition-all shadow-lg active:scale-95 ${isAddFormVisible ? 'bg-slate-100 text-slate-600' : 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700'
-            }`}
-        >
-          {isAddFormVisible ? <XCircle size={18} /> : <Plus size={18} />}
-          <span>{isAddFormVisible ? 'Close' : 'Add User'}</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center space-x-2 px-3 py-2 bg-emerald-600 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-emerald-200 hover:bg-emerald-700 active:scale-95"
+          >
+            <FileSpreadsheet size={16} />
+            <span>Excel</span>
+          </button>
+          <button
+            onClick={exportToPDF}
+            className="flex items-center space-x-2 px-3 py-2 bg-rose-600 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95"
+          >
+            <FileText size={16} />
+            <span>PDF</span>
+          </button>
+          <button
+            onClick={toggleAddForm}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-black transition-all shadow-lg active:scale-95 ${isAddFormVisible ? 'bg-slate-100 text-slate-600' : 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700'
+              }`}
+          >
+            {isAddFormVisible ? <XCircle size={18} /> : <Plus size={18} />}
+            <span>{isAddFormVisible ? 'Close' : 'Add User'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-2 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-blue-50 shadow-sm">
         <div className="relative flex-1">
           <Input
-            placeholder="Search directory..."
+            placeholder="Search by name, email, phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-12 bg-white/60 border-transparent rounded-xl focus:bg-white"
@@ -333,16 +399,7 @@ export const AdminUsersTab: React.FC = () => {
         </div>
       )}
 
-      {/* Select All Toggle */}
-      <div className="flex items-center space-x-2 px-2">
-        <input
-          type="checkbox"
-          checked={filteredUsers.length > 0 && selectedIds.length === filteredUsers.length}
-          onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select All {filteredUsers.length > 0 && `(${filteredUsers.length})`}</span>
-      </div>
+      {/* Select All Toggle logic is now inside the table header */}
 
       {isAddFormVisible && (
         <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300">
@@ -355,11 +412,15 @@ export const AdminUsersTab: React.FC = () => {
               <Input label="Email" name="email" value={formData.email || ''} onChange={handleInputChange} fullWidth placeholder="john@example.com" icon={<Mail size={18} />} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Phone Number" name="phone" value={formData.phone || ''} onChange={handleInputChange} fullWidth placeholder="+255..." icon={<Phone size={18} />} />
               <Input label="College" name="college" value={formData.college || ''} onChange={handleInputChange} fullWidth placeholder="Medical College" icon={<Building2 size={18} />} />
-              <Select label="Role" options={roleOptions} value={formData.role || 'student'} onChange={val => handleSelectChange('role', val)} fullWidth />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select label="Class Scope" options={classTypeOptions} value={formData.classType || ''} onChange={val => handleSelectChange('classType', val)} fullWidth />
+              {/* Class Scope and Level Segment */}
+              <div className="grid grid-cols-2 gap-2">
+                <Select label="Role" options={roleOptions} value={formData.role || 'student'} onChange={val => handleSelectChange('role', val)} fullWidth />
+                <Select label="Type" options={classTypeOptions} value={formData.classType || ''} onChange={val => handleSelectChange('classType', val)} fullWidth />
+              </div>
               <Select label="Level Segment" options={filteredClassLevelOptions(formData.classType)} value={formData.classLevel || ''} onChange={val => handleSelectChange('classLevel', val)} fullWidth />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -371,85 +432,134 @@ export const AdminUsersTab: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredUsers.map(user => (
-          <Card key={user.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 backdrop-blur-md rounded-[2.5rem] overflow-hidden border transition-all ${selectedIds.includes(user.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'bg-white/80 border-white/40'}`}>
-            <div className="absolute top-4 left-4 z-10">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(user.id)}
-                onChange={() => toggleSelection(user.id)}
-                className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
-              />
-            </div>
-            <div className="p-4 pl-12 bg-slate-50/50 flex justify-between items-center">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-800 text-sm">{user.username}</h3>
-                  <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => toggleEditForm(user)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit size={14} /></button>
-                <button onClick={() => triggerDelete(user)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /></button>
-              </div>
-            </div>
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-center text-[10px] text-slate-500 font-medium">
-                <Mail size={12} className="mr-2 text-blue-500" />
-                <span className="truncate">{user.email}</span>
-              </div>
-              <div className="flex items-center text-[10px] text-slate-500 font-medium">
-                <Building2 size={12} className="mr-2 text-blue-500" />
-                <span className="truncate">{user.college || 'No college listed'}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                <div className="flex items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <GraduationCap size={12} className="mr-1 text-slate-300" />
-                  {user.classLevel || 'N/A'}
-                </div>
-                <div className="text-[9px] font-black text-blue-600 uppercase tracking-widest">
-                  {user.classType}
-                </div>
-              </div>
-            </CardContent>
-
-            {editingUserId === user.id && (
-              <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-xl p-5 overflow-y-auto animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="font-black text-slate-800">Modify Identity</h4>
-                  <button onClick={() => setEditingUserId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={20} /></button>
-                </div>
-                <div className="space-y-4">
-                  <Input value={formData.username || ''} onChange={handleInputChange} name="username" fullWidth placeholder="Username" />
-                  <Input value={formData.email || ''} onChange={handleInputChange} name="email" fullWidth placeholder="Email" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input value={formData.college || ''} onChange={handleInputChange} name="college" fullWidth placeholder="College" icon={<Building2 size={16} />} />
-                    <Select options={roleOptions} value={formData.role || ''} onChange={v => handleSelectChange('role', v)} fullWidth />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Select options={classTypeOptions} value={formData.classType || ''} onChange={val => handleSelectChange('classType', val)} fullWidth />
-                    <Select options={filteredClassLevelOptions(formData.classType)} value={formData.classLevel || ''} onChange={val => handleSelectChange('classLevel', val)} fullWidth />
-                  </div>
-                  <div className="pt-2 space-y-3">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update Credentials</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} placeholder="New Password" fullWidth icon={<Lock size={16} />} />
-                      <Input type="password" value={confirmEditPassword} onChange={e => setConfirmEditPassword(e.target.value)} placeholder="Confirm New" fullWidth icon={<Unlock size={16} />} />
+      {/* Table View */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-3xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-4 text-left w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredUsers.length > 0 && selectedIds.length === filteredUsers.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">User</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Contact Info</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Academic Info</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Status</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredUsers.map(user => (
+                <tr key={user.id} className={`group hover:bg-blue-50/30 transition-colors ${selectedIds.includes(user.id) ? 'bg-blue-50/80' : ''}`}>
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(user.id)}
+                      onChange={() => toggleSelection(user.id)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-black text-xs">
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-800 text-sm">{user.username}</div>
+                        <div className="text-[10px] text-slate-500 font-medium">ID: {user.id}</div>
+                      </div>
                     </div>
-                  </div>
-                  <Button onClick={handleUpdateUser} fullWidth className="bg-blue-600 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-200">Commit Changes</Button>
-                </div>
-              </div>
-            )}
-          </Card>
-        ))}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-xs text-slate-600">
+                        <Mail size={12} className="mr-1.5 text-blue-400" />
+                        {user.email}
+                      </div>
+                      <div className="flex items-center text-xs text-slate-600">
+                        <Phone size={12} className="mr-1.5 text-emerald-400" />
+                        {user.phone || <span className="text-slate-300 italic">No phone</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-xs text-slate-600">
+                        <Building2 size={12} className="mr-1.5 text-indigo-400" />
+                        <span className="truncate max-w-[150px]">{user.college || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wide">
+                        <GraduationCap size={12} className="mr-1.5" />
+                        {user.classType} • {user.classLevel}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => toggleEditForm(user)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button onClick={() => triggerDelete(user)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No users found matching your criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={!!editingUserId && !!selectedUser}
+        onClose={() => setEditingUserId(null)}
+        title={selectedUser ? `Edit User: ${selectedUser.username}` : 'Edit User'}
+        size="lg"
+      >
+        {selectedUser && (
+          <div className="space-y-4">
+            <Input value={formData.username || ''} onChange={handleInputChange} name="username" fullWidth placeholder="Username" label="Username" />
+            <Input value={formData.email || ''} onChange={handleInputChange} name="email" fullWidth placeholder="Email" label="Email" />
+            <Input value={formData.phone || ''} onChange={handleInputChange} name="phone" fullWidth placeholder="Phone Number" label="Phone Number" icon={<Phone size={16} />} />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input value={formData.college || ''} onChange={handleInputChange} name="college" fullWidth placeholder="College" icon={<Building2 size={16} />} label="College" />
+              <Select options={roleOptions} value={formData.role || ''} onChange={v => handleSelectChange('role', v)} fullWidth label="Role" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Select options={classTypeOptions} value={formData.classType || ''} onChange={val => handleSelectChange('classType', val)} fullWidth label="Class Type" />
+              <Select options={filteredClassLevelOptions(formData.classType)} value={formData.classLevel || ''} onChange={val => handleSelectChange('classLevel', val)} fullWidth label="Level" />
+            </div>
+            <div className="pt-4 space-y-3 border-t border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update Password (Optional)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} placeholder="New Password" fullWidth icon={<Lock size={16} />} />
+                <Input type="password" value={confirmEditPassword} onChange={e => setConfirmEditPassword(e.target.value)} placeholder="Confirm New" fullWidth icon={<Unlock size={16} />} />
+              </div>
+            </div>
+            <div className="pt-4 flex gap-3">
+              <Button onClick={() => setEditingUserId(null)} className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200" >Cancel</Button>
+              <Button onClick={handleUpdateUser} className="flex-1 bg-blue-600 text-white shadow-lg shadow-blue-200">Save Changes</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}

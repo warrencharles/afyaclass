@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
 import { useContent } from '../../../contexts/ContentContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
@@ -123,9 +122,6 @@ export const AdminContentTab: React.FC = () => {
       setEditingContentId(null);
       resetForm();
     } else {
-      if (editingContentId !== null) {
-        setEditingContentId(null);
-      }
       setEditingContentId(contentItem.id);
       setSelectedContent(contentItem);
       setFormData({
@@ -421,9 +417,7 @@ export const AdminContentTab: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      {/* Filters & Search - Improved Mobile/Desktop Layout */}
       <div className="bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-blue-50 shadow-sm flex flex-col md:flex-row gap-3">
-        {/* Search - Full width on mobile, Fixed width on desktop */}
         <div className="relative w-full md:w-72 flex-shrink-0">
           <Input
             placeholder="Search materials..."
@@ -435,7 +429,6 @@ export const AdminContentTab: React.FC = () => {
           />
         </div>
 
-        {/* Filters - Scrollable horizontal list taking remaining space */}
         <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 px-1 min-w-0">
           {contentTypes.map(type => (
             <button
@@ -467,17 +460,6 @@ export const AdminContentTab: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* Select All Toggle */}
-      <div className="flex items-center space-x-2 px-2">
-        <input
-          type="checkbox"
-          checked={filteredContents.length > 0 && selectedIds.length === filteredContents.length}
-          onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select All {filteredContents.length > 0 && `(${filteredContents.length})`}</span>
-      </div>
 
       {isAddFormVisible && (
         <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300">
@@ -539,117 +521,129 @@ export const AdminContentTab: React.FC = () => {
         </div>
       )}
 
-      {/* Content Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredContents.length === 0 ? (
-          <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-[2rem] border border-white/80 border-dashed">
-            <BookOpen size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-500 font-black uppercase tracking-widest">No resources found</p>
-          </div>
-        ) : filteredContents.map(content => (
-          <Card key={content.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 bg-white hover:shadow-xl transition-all duration-500 rounded-[2rem] overflow-hidden border ${selectedIds.includes(content.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'border-slate-100'}`}>
-            <div className="p-3 border-b border-slate-50 flex items-start gap-3">
-              <div className="flex-shrink-0 pt-0.5">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(content.id)}
-                  onChange={() => toggleSelection(content.id)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
-                />
-              </div>
-              <div className="flex-shrink-0 p-1.5 bg-white rounded-xl shadow-sm border border-slate-100">
-                {getContentTypeIcon(content.type)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-black text-slate-800 text-sm leading-snug mb-1">{content.title}</h3>
-                <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                  <MapPin size={10} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">{getSubjectName(content.subjectId)}</span>
-                </div>
-              </div>
-            </div>
-
-            <CardContent className="p-4 pt-3">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="space-y-0.5">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Semester</p>
-                  <p className="text-sm font-bold text-slate-700">{content.semester || 'N/A'}</p>
-                </div>
-                <div className="space-y-0.5 text-right">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Date Added</p>
-                  <p className="text-sm font-bold text-slate-700">{new Date(content.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-slate-50">
-                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${content.fileType === 'pdf' ? 'bg-red-50 text-red-600 border border-red-100' :
-                  content.fileType === 'image' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                    'bg-purple-50 text-purple-600 border border-purple-100'
-                  }`}>
-                  {content.fileType || 'File'}
-                </span>
-
-                <div className="flex gap-1">
-                  <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all active:scale-95" title="View"><Eye size={18} /></button>
-                  <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all active:scale-95" title="Edit"><Edit size={18} /></button>
-                  <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95" title="Delete"><Trash2 size={18} /></button>
-                </div>
-              </div>
-            </CardContent>
-
-            {/* In-Card Editor - Mobile Friendly */}
-            {editingContentId === content.id && (
-              <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-xl p-5 overflow-y-auto animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-black text-slate-800 text-sm">Update Content</h4>
-                  <button onClick={() => setEditingContentId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={18} /></button>
-                </div>
-                <div className="space-y-4 pb-4">
-                  <Input label="Title" value={formData.title || ''} onChange={handleInputChange} name="title" fullWidth placeholder="Title" />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Select label="Class" options={classOptions} value={formData.classId?.toString() || ''} onChange={v => handleSelectChange('classId', v)} fullWidth />
-                    <Select label="Level" options={classLevelOptions} value={formData.classLevelId?.toString() || ''} onChange={v => handleSelectChange('classLevelId', v)} fullWidth />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Select label="Semester" options={semesterOptions} value={formData.semester || ''} onChange={v => handleSelectChange('semester', v)} fullWidth />
-                    <Select label="Subject" options={subjectOptions} value={formData.subjectId?.toString() || ''} onChange={v => handleSelectChange('subjectId', v)} fullWidth />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Resource Type</label>
-                    <Select
-                      options={[
-                        { value: 'note', label: 'Notes' },
-                        { value: 'book', label: 'Books' },
-                        { value: 'video', label: 'Video Tutorials' },
-                        { value: 'practical', label: 'Practicals' },
-                        { value: 'exam', label: 'Exams' },
-                        { value: 'examGuide', label: 'Exam Guides' },
-                        { value: 'nactvet', label: 'NACTVET Tools' }
-                      ]}
-                      value={formData.type}
-                      onChange={v => handleSelectChange('type', v)}
-                      fullWidth
-                    />
-                  </div>
-
-                  {formData.type === 'video' && (
-                    <Input label="Video URL" value={formData.videoUrl || ''} onChange={handleInputChange} name="videoUrl" fullWidth placeholder="Paste link here..." icon={<Video size={18} />} />
-                  )}
-
-                  <Button onClick={handleUpdateContent} fullWidth className="bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-all text-sm shadow-lg shadow-blue-200">
-                    Save Changes
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
-        ))}
+      {/* Table View */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-3xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-4 text-left w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredContents.length > 0 && selectedIds.length === filteredContents.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Type</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Title</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Subject</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Context</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredContents.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No materials found.
+                  </td>
+                </tr>
+              ) : (
+                filteredContents.map(content => (
+                  <tr key={content.id} className={`group hover:bg-blue-50/30 transition-colors ${selectedIds.includes(content.id) ? 'bg-blue-50/80' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(content.id)}
+                        onChange={() => toggleSelection(content.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="p-1.5 bg-white rounded-lg shadow-sm border border-slate-100 w-fit">
+                        {getContentTypeIcon(content.type)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-bold text-slate-800 text-sm max-w-[200px] truncate" title={content.title}>{content.title}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{new Date(content.createdAt).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center text-xs text-slate-600">
+                        <span className="truncate max-w-[150px]">{getSubjectName(content.subjectId)}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-xs text-slate-500">
+                        {content.semester ? `Sem ${content.semester}` : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleViewEdit(content)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View"><Eye size={14} /></button>
+                        <button onClick={() => toggleEditForm(content)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit"><Edit size={14} /></button>
+                        <button onClick={() => triggerDelete(content)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Viewer Modal - For Images and Videos */}
+      {/* Edit Content Modal */}
+      <Modal
+        isOpen={!!editingContentId}
+        onClose={() => setEditingContentId(null)}
+        title="Update Ecosystem Content"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Input label="Title" value={formData.title || ''} onChange={handleInputChange} name="title" fullWidth placeholder="Title" />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="Class" options={classOptions} value={formData.classId?.toString() || ''} onChange={v => handleSelectChange('classId', v)} fullWidth />
+            <Select label="Level" options={classLevelOptions} value={formData.classLevelId?.toString() || ''} onChange={v => handleSelectChange('classLevelId', v)} fullWidth />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="Semester" options={semesterOptions} value={formData.semester || ''} onChange={v => handleSelectChange('semester', v)} fullWidth />
+            <Select label="Subject" options={subjectOptions} value={formData.subjectId?.toString() || ''} onChange={v => handleSelectChange('subjectId', v)} fullWidth />
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Resource Type</label>
+            <Select
+              options={[
+                { value: 'note', label: 'Notes' },
+                { value: 'book', label: 'Books' },
+                { value: 'video', label: 'Video Tutorials' },
+                { value: 'practical', label: 'Practicals' },
+                { value: 'exam', label: 'Exams' },
+                { value: 'examGuide', label: 'Exam Guides' },
+                { value: 'nactvet', label: 'NACTVET Tools' }
+              ]}
+              value={formData.type}
+              onChange={v => handleSelectChange('type', v)}
+              fullWidth
+            />
+          </div>
+
+          {formData.type === 'video' && (
+            <Input label="Video URL" value={formData.videoUrl || ''} onChange={handleInputChange} name="videoUrl" fullWidth placeholder="Paste link here..." icon={<Video size={18} />} />
+          )}
+
+          <div className="pt-2 flex gap-3">
+            <Button onClick={() => setEditingContentId(null)} className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200">Cancel</Button>
+            <Button onClick={handleUpdateContent} className="flex-1 bg-blue-600 text-white shadow-lg shadow-blue-200">Save Updates</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Viewer Modal */}
       <Modal
         isOpen={isModalOpen && selectedFileForView?.type !== 'pdf'}
         onClose={() => setIsModalOpen(false)}
@@ -679,7 +673,7 @@ export const AdminContentTab: React.FC = () => {
         variant={confirmModal.variant}
       />
 
-      {/* PDF Viewer - Standalone Modal Alternative */}
+      {/* PDF Viewer */}
       {isModalOpen && selectedFileForView?.type === 'pdf' && (
         <PDFViewer
           fileUrl={selectedFileForView.url || ''}

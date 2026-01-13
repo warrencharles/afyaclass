@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
-import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { useToast } from '../../../contexts/ToastContext';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+import { Modal } from '../../../components/ui/Modal';
 import { Edit, Trash2, Plus, BookOpen, Search, Layers, Hash, XCircle, Loader2 } from 'lucide-react';
 import { Class } from '../../../types';
 import { naturalSort } from '../../../utils/sorting';
@@ -196,17 +196,6 @@ export const AdminClassesTab: React.FC = () => {
         </div>
       )}
 
-      {/* Select All Toggle */}
-      <div className="flex items-center space-x-2 px-2">
-        <input
-          type="checkbox"
-          checked={filteredClasses.length > 0 && selectedIds.length === filteredClasses.length}
-          onChange={handleSelectAll}
-          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select All {filteredClasses.length > 0 && `(${filteredClasses.length})`}</span>
-      </div>
-
       {isAddFormVisible && (
         <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center">
@@ -235,74 +224,100 @@ export const AdminClassesTab: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredClasses.length === 0 ? (
-          <div className="col-span-full py-20 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/80 border-dashed text-center">
-            <BookOpen size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-500 font-black uppercase tracking-widest">No matching classes</p>
-          </div>
-        ) : (
-          filteredClasses.map(classItem => (
-            <Card key={classItem.id} className={`group relative border-0 shadow-lg shadow-blue-900/5 backdrop-blur-md hover:shadow-xl transition-all duration-500 rounded-[2rem] overflow-hidden border ${selectedIds.includes(classItem.id) ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-400 ring-offset-2' : 'bg-white/80 border-white/40'}`}>
-              <div className="absolute top-4 left-4 z-10">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(classItem.id)}
-                  onChange={() => toggleSelection(classItem.id)}
-                  className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 bg-white/50 backdrop-blur-sm cursor-pointer"
-                />
-              </div>
-              <div className="p-4 pl-12 bg-slate-50/50 flex justify-between items-center border-b border-slate-100/50">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    {(classItem.classCode || '??').substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-800 text-sm">{classItem.classCode}</h3>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">Academic Path</p>
-                  </div>
-                </div>
-                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => toggleEditForm(classItem)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit size={14} /></button>
-                  <button onClick={() => triggerDelete(classItem)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /></button>
-                </div>
-              </div>
-
-              <CardContent className="p-5">
-                <h4 className="font-black text-slate-700 text-sm mb-2">{classItem.name}</h4>
-                {classItem.description && (
-                  <div className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                    {expandedDescriptions[classItem.id]
-                      ? classItem.description
-                      : `${classItem.description.substring(0, MAX_DESCRIPTION_LENGTH)}${classItem.description.length > MAX_DESCRIPTION_LENGTH ? '...' : ''}`}
-
-                    {classItem.description.length > MAX_DESCRIPTION_LENGTH && (
-                      <button onClick={() => toggleDescriptionExpansion(classItem.id)} className="ml-1 text-blue-600 font-black uppercase tracking-tighter hover:underline">
-                        {expandedDescriptions[classItem.id] ? 'Less' : 'More'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-
-              {editingClassId === classItem.id && (
-                <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-xl p-5 overflow-y-auto animate-in fade-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-black text-slate-800 text-sm">Update Program</h4>
-                    <button onClick={() => setEditingClassId(null)} className="p-1 text-slate-400 hover:text-red-500"><XCircle size={18} /></button>
-                  </div>
-                  <div className="space-y-4">
-                    <Input value={formData.classCode || ''} onChange={handleInputChange} name="classCode" fullWidth placeholder="Code" />
-                    <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth placeholder="Name" />
-                    <textarea value={formData.description || ''} onChange={handleInputChange} name="description" rows={3} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold font-sans" />
-                    <Button onClick={handleUpdateClass} fullWidth className="bg-blue-600 text-white font-black py-3 rounded-xl shadow-xl shadow-blue-200">Save Changes</Button>
-                  </div>
-                </div>
+      {/* Table View */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-3xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-4 text-left w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredClasses.length > 0 && selectedIds.length === filteredClasses.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Code</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Program Name</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Description</th>
+                <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredClasses.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No classes found.
+                  </td>
+                </tr>
+              ) : (
+                filteredClasses.map(classItem => (
+                  <tr key={classItem.id} className={`group hover:bg-blue-50/30 transition-colors ${selectedIds.includes(classItem.id) ? 'bg-blue-50/80' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(classItem.id)}
+                        onChange={() => toggleSelection(classItem.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-black text-slate-700 text-sm">{classItem.classCode}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-bold text-slate-800 text-sm">{classItem.name}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-xs text-slate-500 max-w-xs">
+                        {classItem.description ? (
+                          <>
+                            {expandedDescriptions[classItem.id]
+                              ? classItem.description
+                              : `${classItem.description.substring(0, MAX_DESCRIPTION_LENGTH)}${classItem.description.length > MAX_DESCRIPTION_LENGTH ? '...' : ''}`}
+                            {classItem.description.length > MAX_DESCRIPTION_LENGTH && (
+                              <button onClick={() => toggleDescriptionExpansion(classItem.id)} className="ml-1 text-blue-600 font-bold hover:underline">
+                                {expandedDescriptions[classItem.id] ? '(less)' : '(more)'}
+                              </button>
+                            )}
+                          </>
+                        ) : <span className="text-slate-300 italic">No description</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => toggleEditForm(classItem)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                        <button onClick={() => triggerDelete(classItem)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-            </Card>
-          ))
-        )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Edit Class Modal */}
+      <Modal
+        isOpen={!!editingClassId}
+        onClose={() => setEditingClassId(null)}
+        title="Update Program"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input value={formData.classCode || ''} onChange={handleInputChange} name="classCode" fullWidth placeholder="Code" label="Short Code" />
+          <Input value={formData.name || ''} onChange={handleInputChange} name="name" fullWidth placeholder="Name" label="Program Name" />
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700">Description</label>
+            <textarea value={formData.description || ''} onChange={handleInputChange} name="description" rows={4} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+          </div>
+          <div className="pt-2 flex gap-3">
+            <Button onClick={() => setEditingClassId(null)} className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200">Cancel</Button>
+            <Button onClick={handleUpdateClass} className="flex-1 bg-blue-600 text-white shadow-lg shadow-blue-200">Save Changes</Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
