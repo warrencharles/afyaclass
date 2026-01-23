@@ -232,7 +232,7 @@ export default function HomeScreen() {
       const semesterMatch = subjectSem === targetSem;
 
       return levelMatch && semesterMatch;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
     console.log(`[Filter] Level: ${selectedLevelId}, Sem: ${selectedSemester} => Found: ${results.length}`);
     setFilteredSubjects(results);

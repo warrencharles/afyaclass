@@ -300,3 +300,16 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(255) UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO system_settings (setting_key, setting_value) VALUES 
+('global_free_access', 'false'),
+('payment_mode', 'pesapal'),
+('manual_payment_instructions', 'Proceed to make payment of the specified amount to Yas/Mix by Yas Vodacom Number: 0XXXXXXX. After payment, upload the screenshot of the transaction here for verification.')
+ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);

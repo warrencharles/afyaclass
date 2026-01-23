@@ -181,4 +181,22 @@ function createNotification($recipientId, $type, $message, $senderId = null, $en
     }
 }
 
+/**
+ * Notify all admin users.
+ */
+function notifyAdmins($type, $message, $senderId = null, $entityId = null, $entityType = null) {
+    global $pdo;
+    try {
+        $stmt = $pdo->query("SELECT id FROM users WHERE role = 'admin'");
+        $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($admins as $admin) {
+            createNotification($admin['id'], $type, $message, $senderId, $entityId, $entityType);
+        }
+        return true;
+    } catch (PDOException $e) {
+        error_log("Error notifying admins: " . $e->getMessage());
+        return false;
+    }
+}
+
 ?>

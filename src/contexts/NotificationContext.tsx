@@ -1,8 +1,8 @@
-import { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
+import axios from 'axios'; // Import axios to use axios.isAxiosError
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import api from '../utils/api'; // Import the axios instance
 import { useAuth } from './AuthContext'; // Assuming AuthContext provides userId and role, and isAuthInitialized
 import { useToast } from './ToastContext'; // Assuming ToastContext provides a way to show toasts
-import api from '../utils/api'; // Import the axios instance
-import axios from 'axios'; // Import axios to use axios.isAxiosError
 
 interface Notification {
   id: number;
@@ -187,7 +187,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   // Effect to show toast for new unread notifications
   useEffect(() => {
     if (notifications.length > 0) {
-      const newUnreadNotifications = notifications.filter(n => !n.isRead && (Date.now() - new Date(n.createdAt).getTime() < 5000)); // Consider "new" if created in last 5 seconds
+      // Filter out notifications that already have immediate UI feedback (like payment submission success)
+      const silentTypes = ['payment_proof_submitted'];
+
+      const newUnreadNotifications = notifications.filter(n =>
+        !n.isRead &&
+        !silentTypes.includes(n.type) &&
+        (Date.now() - new Date(n.createdAt).getTime() < 5000)
+      );
+
       newUnreadNotifications.forEach(n => {
         showToast(n.message, 'info', 5000); // Show for 5 seconds
       });

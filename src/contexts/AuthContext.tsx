@@ -1,28 +1,27 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User } from '../types'; // Use imported User type
-import { useToast } from './ToastContext';
+import SessionResolutionModal from '../components/SessionResolutionModal'; // Import the new modal
+import { Session, User } from '../types'; // Use imported User type
+import { submitMaterialAccessPaymentProof } from '../utils/api'; // Only import what's needed
 import {
-  loginUser,
-  registerUser,
-  logoutUser,
-  updateUserProfile,
-  updateUserPassword,
   deleteUserAccount,
   fetchUserProfile,
-  startMaterialTrial as startMaterialTrialApi,
-  verifyLoginOtp,
-  resendConfirmationEmail,
+  loginUser,
+  logoutUser,
+  registerUser,
   requestPasswordReset,
+  resendConfirmationEmail,
   resetPassword,
+  startMaterialTrial as startMaterialTrialApi,
   terminateAllOtherSessions as terminateAllOtherSessionsApi,
+  updateUserPassword,
+  updateUserProfile,
   validateToken,
+  verifyLoginOtp,
 } from '../utils/authApi';
-import { submitMaterialAccessPaymentProof } from '../utils/api'; // Only import what's needed
-import { saveAuthToken, clearAuthToken, saveUser, getAuthToken, getUserFromStorage, saveDeviceId, getDeviceId, clearDeviceId } from '../utils/authStorage'; // Import authStorage utilities
+import { clearAuthToken, clearDeviceId, getAuthToken, getDeviceId, getUserFromStorage, saveAuthToken, saveDeviceId, saveUser } from '../utils/authStorage'; // Import authStorage utilities
 import axiosClient from '../utils/axiosClient'; // Import axiosClient
-import SessionResolutionModal from '../components/SessionResolutionModal'; // Import the new modal
-import { Session } from '../types'; // Import Session type
+import { useToast } from './ToastContext';
 
 interface SessionConflictDetails {
   userId: number;
@@ -225,12 +224,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           classLevel: data.user.classLevel,
           role: data.user.role,
           hasMaterialAccess: data.user.hasMaterialAccess,
+          isGlobalFreeAccessEnabled: data.user.isGlobalFreeAccessEnabled,
           materialTrialStartTime: data.user.materialTrialStartTime,
+          materialTrialEndTime: data.user.materialTrialEndTime,
           materialPaidAccessEndTime: data.user.materialPaidAccessEndTime ?? null,
           hasPendingPayment: data.user.hasPendingPayment,
           isConfirmed: data.user.isConfirmed,
-          canAccessExams: data.user.hasMaterialAccess,
-          canAccessExamGuides: data.user.hasMaterialAccess,
           token: (data.token ?? null) as string | null,
           device_id: (data.sessionId ?? null) as string | null, // Use sessionId as device_id
         };
@@ -387,7 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [pendingLoginCredentials, pendingLoginUserId, sessionResolutionToken, showToast, login, closeSessionTerminationModal, navigate]);
 
 
-  const register = async (userData: {
+  const register = useCallback(async (userData: {
     email: string;
     password: string;
     username: string;
@@ -426,7 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
 
   const isAuthenticated = !!user;
@@ -468,13 +467,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         classLevel: data.classLevel,
         role: data.role,
         hasMaterialAccess: data.hasMaterialAccess ?? false,
+        isGlobalFreeAccessEnabled: data.isGlobalFreeAccessEnabled ?? false,
         materialTrialStartTime: data.materialTrialStartTime ?? null,
         materialTrialEndTime: data.materialTrialEndTime ?? null,
         materialPaidAccessEndTime: data.materialPaidAccessEndTime ?? null,
         hasPendingPayment: data.hasPendingPayment ?? false,
         isConfirmed: data.isConfirmed ?? false,
-        canAccessExams: data.hasMaterialAccess,
-        canAccessExamGuides: data.hasMaterialAccess,
         token: user?.token ?? null,
         device_id: user?.device_id ?? null,
       };
@@ -543,23 +541,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      const id = window.setInterval(() => { // Use window.setInterval for type safety with useRef
+      const id = window.setInterval(() => {
         if (document.visibilityState === 'visible') {
           console.log('AuthContext: Performing periodic session check...');
-          refetchUser(user.id).catch(err => {
-            if (err.response?.status === 401 || err.response?.status === 403) {
-              console.warn('AuthContext: Periodic session check failed due to authentication error. Logging out.');
-              logout(true, true);
-            } else {
-              // Suppress detailed error logging for network issues during background polling
-              console.warn('AuthContext: Periodic session check failed (network/server issue).');
-            }
-          });
+          if (typeof refetchUser === 'function') {
+            refetchUser(user.id).catch(err => {
+              if (err.response?.status === 401 || err.response?.status === 403) {
+                console.warn('AuthContext: Periodic session check failed due to authentication error. Logging out.');
+                if (typeof logout === 'function') {
+                  logout(true, true).catch(logErr => console.error('Error during auto-logout:', logErr));
+                }
+              } else {
+                console.warn('AuthContext: Periodic session check failed (network/server issue).');
+              }
+            });
+          }
         }
       }, 60000);
-      registerInterval(id); // Register the interval
+      if (typeof registerInterval === 'function') {
+        registerInterval(id as unknown as number);
+      }
     } else {
-      clearAllRegisteredIntervals(); // Clear all intervals if not authenticated
+      if (typeof clearAllRegisteredIntervals === 'function') {
+        clearAllRegisteredIntervals();
+      }
     }
 
     return () => {
@@ -595,8 +600,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Merge fresh user data with local session identifiers (token & device_id)
                 const updatedUser: User = {
                   ...validationResponse.user,
+                  hasMaterialAccess: validationResponse.user.hasMaterialAccess ?? false,
+                  isGlobalFreeAccessEnabled: validationResponse.user.isGlobalFreeAccessEnabled ?? false,
+                  materialTrialStartTime: validationResponse.user.materialTrialStartTime ?? null,
+                  materialTrialEndTime: validationResponse.user.materialTrialEndTime ?? null,
+                  materialPaidAccessEndTime: validationResponse.user.materialPaidAccessEndTime ?? null,
+                  hasPendingPayment: validationResponse.user.hasPendingPayment ?? false,
+                  isConfirmed: validationResponse.user.isConfirmed ?? false,
                   token: storedToken,
-                  device_id: storedUser.device_id
+                  device_id: storedUser.device_id as string,
                 };
                 setUser(updatedUser);
                 setProfile(updatedUser);
@@ -718,7 +730,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const deleteAccount = async (userId: string) => {
+  const deleteAccount = useCallback(async (userId: string) => {
     if (!user || user.id !== Number(userId)) {
       showToast('Unauthorized action.', 'error');
       throw new Error('Unauthorized');
@@ -739,9 +751,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, showToast, logout]);
 
-  const submitPaymentProof = async (proofData: {
+  const submitPaymentProof = useCallback(async (proofData: {
     userId: string;
     name: string;
     email: string;
@@ -772,9 +784,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast, refetchUser]);
 
-  const startMaterialTrial = async (userId: number) => {
+  const startMaterialTrial = useCallback(async (userId: number) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -790,9 +802,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [refetchUser, showToast]);
 
-  const verifyOtpLogin = async (otp: string) => {
+  const verifyOtpLogin = useCallback(async (otp: string) => {
     if (!otpVerificationState.userId || !otpVerificationState.email) {
       showToast('Cannot verify OTP without user ID and email.', 'error');
       return;
@@ -817,9 +829,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [otpVerificationState, showToast, navigate]);
 
-  const resendOtp = async (email: string) => {
+  const resendOtp = useCallback(async (email: string) => {
     if (!email) {
       showToast('Email is required to resend OTP.', 'error');
       return;
@@ -842,9 +854,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const initiatePasswordReset = async (email: string) => {
+  const initiatePasswordReset = useCallback(async (email: string) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -862,9 +874,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const verifyPasswordResetOtp = async (_otp: string) => {
+  const verifyPasswordResetOtp = useCallback(async (_otp: string) => {
     if (!passwordResetState.email || !passwordResetState.otpSent) {
       showToast('Please request a password reset first.', 'error');
       return;
@@ -883,9 +895,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [passwordResetState.email, passwordResetState.otpSent, showToast]);
 
-  const completePasswordReset = async (otp: string, newPassword: string) => {
+  const completePasswordReset = useCallback(async (otp: string, newPassword: string) => {
     if (!passwordResetState.email || !passwordResetState.otpVerified) {
       showToast('Please complete the OTP verification step first.', 'error');
       return;
@@ -909,9 +921,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [passwordResetState.email, passwordResetState.otpVerified, showToast]);
 
-  const resendPasswordResetOtp = async () => {
+  const resendPasswordResetOtp = useCallback(async () => {
     if (!passwordResetState.email || passwordResetState.resendCooldown > 0) {
       showToast('Cannot resend OTP. Please wait or provide an email.', 'warning');
       return;
@@ -932,7 +944,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [passwordResetState.email, passwordResetState.resendCooldown, showToast]);
 
   const contextValue = React.useMemo(() => ({
     user,

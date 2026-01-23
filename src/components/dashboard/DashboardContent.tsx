@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, RefObject } from 'react'; // Re-added RefObject
+import { AlertTriangle, Book, Book as BookIcon, BookOpen, ChevronLeft, ClipboardList, Clock, File, FileText, Search, Video } from 'lucide-react';
+import React, { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'; // Re-added RefObject
 import { useOutletContext } from 'react-router-dom'; // Removed useNavigate
 import { useAuth } from '../../contexts/AuthContext';
 import { useContent } from '../../contexts/ContentContext';
-import { ContentType, Subject, Advertisement } from '../../types';
-import { FileText, Book, File, Clock, ClipboardList, Book as BookIcon, ChevronLeft, Video, AlertTriangle, Search, BookOpen } from 'lucide-react';
-import { Button } from '../ui/Button';
 import { useToast } from '../../contexts/ToastContext'; // Import Toast
+import { Advertisement, ContentType, Subject } from '../../types';
+import { Button } from '../ui/Button';
 // Removed Card import
+import { AccessStatusSection } from './AccessStatusSection';
 import { AdvertisementBanner } from './AdvertisementBanner';
 import { ContentTab } from './ContentTab';
 import { PaymentProofFormModal } from './PaymentProofFormModal';
-import { AccessStatusSection } from './AccessStatusSection';
 import { SubjectGrid } from './SubjectGrid';
 
 export interface DashboardOutletContext {
@@ -48,8 +48,9 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const learningMaterialsRef = useRef<HTMLDivElement>(null);
   const [timeTick, setTimeTick] = useState(0);
-  const { addToast } = useToast();
+  const { showToast } = useToast();
   const prevHasMaterialAccess = useRef<boolean | undefined>(user?.hasMaterialAccess);
+  const prevIsGlobalFreeAccess = useRef<boolean | undefined>(user?.isGlobalFreeAccessEnabled);
 
   // --- Real-time Polling & Notifications ---
   useEffect(() => {
@@ -59,27 +60,36 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
 
       // Check for access status change
       if (updatedUser && prevHasMaterialAccess.current !== undefined) {
-        if (!prevHasMaterialAccess.current && updatedUser.hasMaterialAccess) {
-          addToast('Global Free Access has been enabled by the admin!', 'success');
-        } else if (prevHasMaterialAccess.current && !updatedUser.hasMaterialAccess) {
-          addToast('Global Free Access has ended.', 'info');
+        // ONLY show "Global Free Access" toasts if the GLOBAL flag changed
+        if (updatedUser.isGlobalFreeAccessEnabled !== prevIsGlobalFreeAccess.current) {
+          if (updatedUser.isGlobalFreeAccessEnabled) {
+            showToast('Global Free Access has been enabled by the admin!', 'success');
+          } else {
+            showToast('Global Free Access has ended.', 'info');
+          }
         }
+        // Specific user access changes (e.g. manual revoke) are handled by NotificationContext toasts
+        // created by the backend. We don't need additional toasts here for general hasMaterialAccess changes.
       }
 
-      // Update ref *after* check
+      // Update refs *after* check
       if (updatedUser) {
         prevHasMaterialAccess.current = updatedUser.hasMaterialAccess;
+        prevIsGlobalFreeAccess.current = updatedUser.isGlobalFreeAccessEnabled;
       }
 
     }, 10000); // Poll every 10 seconds for faster feedback (as requested "instant" - though 10s is reasonable load)
 
     return () => clearInterval(pollInterval);
-  }, [refetchUser, addToast]);
+  }, [refetchUser, showToast]);
 
   // Update ref when user object changes naturally (e.g. manual refetch or initial load)
   useEffect(() => {
-    prevHasMaterialAccess.current = user?.hasMaterialAccess;
-  }, [user?.hasMaterialAccess]);
+    if (user) {
+      prevHasMaterialAccess.current = user.hasMaterialAccess;
+      prevIsGlobalFreeAccess.current = user.isGlobalFreeAccessEnabled;
+    }
+  }, [user?.hasMaterialAccess, user?.isGlobalFreeAccessEnabled]);
 
   // --- Logic for Access Control (Overlay) ---
   const handleAccessEnd = useCallback(() => {
@@ -89,7 +99,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
 
   const materialTrialRemainingTime = useMemo(() => {
     // Depend on timeTick to force re-calc
-    if (user?.hasMaterialAccess) return 0;
+    if (user?.hasMaterialAccess || user?.isGlobalFreeAccessEnabled) return 0;
 
     if (!user?.materialTrialStartTime && !user?.materialTrialEndTime) return 0;
 
@@ -108,14 +118,14 @@ export const DashboardContent: React.FC<DashboardContentProps> = () => {
       calculatedRemainingSeconds = Math.floor(remaining / 1000);
     }
     return calculatedRemainingSeconds;
-  }, [user?.materialTrialStartTime, user?.materialTrialEndTime, user?.hasMaterialAccess, user, timeTick]);
+  }, [user?.materialTrialStartTime, user?.materialTrialEndTime, user?.hasMaterialAccess, user?.isGlobalFreeAccessEnabled, user, timeTick]);
 
   const materialPaidRemainingTime = useMemo(() => {
-    if (!user?.materialPaidAccessEndTime || !user.hasMaterialAccess) return 0;
+    if (!user?.materialPaidAccessEndTime || !user.hasMaterialAccess || user?.isGlobalFreeAccessEnabled) return 0;
     const paidEndTime = new Date(user.materialPaidAccessEndTime).getTime();
     const currentTime = new Date().getTime();
     return Math.floor(Math.max(0, paidEndTime - currentTime) / 1000);
-  }, [user?.materialPaidAccessEndTime, user?.hasMaterialAccess]);
+  }, [user?.materialPaidAccessEndTime, user?.hasMaterialAccess, user?.isGlobalFreeAccessEnabled]);
 
   // Effect: Tick Timer if active
   useEffect(() => {

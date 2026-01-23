@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { BookOpen, ChevronLeft, ChevronRight, DollarSign, FileText, GraduationCap, Home, Image, Layers, LogOut, MessageCircleQuestion, MessageSquare, Settings, Shield, User, UserCog, Users, X } from 'lucide-react'; // Removed Video icon
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminNavbar } from '../../components/layout/AdminNavbar';
+import { Alert } from '../../components/ui/Alert'; // Import Alert for error messages
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
-import { AdminUsersTab } from './tabs/AdminUsersTab';
+import { fetchPendingPaymentRequestsCount, fetchUnreadChatConversationsCount } from '../../utils/api';
+import { AdminDashboardPage } from './AdminDashboardPage';
+import { AdminProfilePage } from './AdminProfilePage';
+import { AdminAdvertisementsTab } from './tabs/AdminAdvertisementsTab';
 import { AdminClassesTab } from './tabs/AdminClassesTab';
 import { AdminClassLevelsTab } from './tabs/AdminClassLevelsTab';
-import { AdminSubjectsTab } from './tabs/AdminSubjectsTab';
 import { AdminContentTab } from './tabs/AdminContentTab';
-import { AdminAdvertisementsTab } from './tabs/AdminAdvertisementsTab';
-import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import { AdminForumTab } from './tabs/AdminForumTab'; // Import AdminForumTab
+import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import AdminQueriesTab from './tabs/AdminQueriesTab'; // Import AdminQueriesTab
 import { AdminSettingsTab } from './tabs/AdminSettingsTab'; // Import AdminSettingsTab
-import { Users, BookOpen, Layers, GraduationCap, FileText, Image, Home, User, Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, Shield, UserCog, Bell, DollarSign, MessageSquare, MessageCircleQuestion } from 'lucide-react'; // Removed Video icon
-import { Modal } from '../../components/ui/Modal';
-import { Button } from '../../components/ui/Button';
-import { Alert } from '../../components/ui/Alert'; // Import Alert for error messages
-import { AdminProfilePage } from './AdminProfilePage';
-import { AdminDashboardPage } from './AdminDashboardPage';
-import { fetchUnreadChatConversationsCount } from '../../utils/api'; // Import API function to fetch unread conversations count
+import { AdminSubjectsTab } from './tabs/AdminSubjectsTab';
+import { AdminUsersTab } from './tabs/AdminUsersTab';
 
 type AdminTab = 'dashboard' | 'users' | 'classes' | 'classLevels' | 'subjects' | 'content' | 'advertisements' | 'payments' | 'forum' | 'queries' | 'settings' | 'profile'; // Added 'settings'
 
@@ -26,7 +26,8 @@ export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [unreadQueriesCount, setUnreadQueriesCount] = useState(0); // State for unread queries count
+  const [unreadQueriesCount, setUnreadQueriesCount] = useState(0);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -35,14 +36,29 @@ export const AdminPage: React.FC = () => {
   const [isConfirmLogoutOpen, setIsConfirmLogoutOpen] = useState(false); // State for logout confirmation modal
   const [logoutError, setLogoutError] = useState<string | null>(null); // State for logout error
 
+  const tabs = React.useMemo(() => [
+    { id: 'dashboard' as AdminTab, label: 'Dashboard', icon: Home, description: 'Comprehensive analytics overview' },
+    { id: 'users' as AdminTab, label: 'Users', icon: Users, description: 'Manage user accounts and permissions' },
+    { id: 'classes' as AdminTab, label: 'Classes', icon: BookOpen, description: 'Manage class types and programs' },
+    { id: 'classLevels' as AdminTab, label: 'Class Levels', icon: Layers, description: 'Manage class levels and semesters' },
+    { id: 'subjects' as AdminTab, label: 'Subjects', icon: GraduationCap, description: 'Manage subjects for each class level' },
+    { id: 'content' as AdminTab, label: 'Content', icon: FileText, description: 'Manage learning materials and resources' }, // Reverted to 'content'
+    { id: 'advertisements' as AdminTab, label: 'Advertisements', icon: Image, description: 'Manage promotional content and banners' },
+    { id: 'payments' as AdminTab, label: 'Payment Management', icon: DollarSign, description: 'Review proofs, monitor logs, and grant access', notificationCount: pendingPaymentsCount },
+    { id: 'forum' as AdminTab, label: 'Forum', icon: MessageSquare, description: 'Manage forum discussions and topics' },
+    { id: 'queries' as AdminTab, label: 'Queries', icon: MessageCircleQuestion, description: 'Review user chat queries', notificationCount: unreadQueriesCount },
+    { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, description: 'Global system configuration' },
+    { id: 'profile' as AdminTab, label: 'Profile', icon: User, description: 'Manage your personal details' },
+  ], [pendingPaymentsCount, unreadQueriesCount]);
+
   // Get active tab from URL query parameter
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab') as AdminTab;
-    if (tab && tabs.some(t => t.id === tab)) {
+    if (tab && tabs.some((t: { id: string }) => t.id === tab)) {
       setActiveTab(tab);
     }
-  }, [location.search]);
+  }, [location.search, tabs]);
 
   // Handle window resize for responsive behavior
   useEffect(() => {
@@ -63,23 +79,23 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   // Toggle sidebar function
-  const toggleSidebar = useCallback(() => {
+  const toggleSidebar = React.useCallback(() => {
     setIsSidebarOpen(prev => !prev);
   }, []);
 
   // Close sidebar when clicking overlay (mobile only)
-  const closeSidebar = useCallback(() => {
+  const closeSidebar = React.useCallback(() => {
     if (isMobile) {
       setIsSidebarOpen(false);
     }
   }, [isMobile]);
 
-  const handleLogoutInitiate = useCallback(() => {
+  const handleLogoutInitiate = React.useCallback(() => {
     setIsConfirmLogoutOpen(true); // Open logout confirmation modal
     setLogoutError(null); // Clear any previous errors
   }, []);
 
-  const handleConfirmLogout = useCallback(() => {
+  const handleConfirmLogout = React.useCallback(() => {
     logout().then(() => {
       setIsConfirmLogoutOpen(false);
       navigate('/login');
@@ -89,45 +105,36 @@ export const AdminPage: React.FC = () => {
     });
   }, [logout, navigate]);
 
-  const handleCancelLogout = useCallback(() => {
+  const handleCancelLogout = React.useCallback(() => {
     setIsConfirmLogoutOpen(false);
     setLogoutError(null);
   }, []);
 
-  // Fetch unread queries count
+  // Fetch unread queries and pending payments count
   useEffect(() => {
-    const getUnreadCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const count = await fetchUnreadChatConversationsCount();
-        setUnreadQueriesCount(count);
+        const [queriesCount, paymentsCount] = await Promise.all([
+          fetchUnreadChatConversationsCount(),
+          fetchPendingPaymentRequestsCount()
+        ]);
+        setUnreadQueriesCount(queriesCount);
+        setPendingPaymentsCount(paymentsCount);
       } catch (err) {
-        console.error('Failed to fetch unread chat conversations count:', err);
+        console.error('Failed to fetch admin notification counts:', err);
       }
     };
 
-    getUnreadCount();
+    fetchCounts();
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        getUnreadCount();
+        fetchCounts();
       }
     }, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
-  const tabs = [
-    { id: 'dashboard' as AdminTab, label: 'Dashboard', icon: Home, description: 'Comprehensive analytics overview' },
-    { id: 'users' as AdminTab, label: 'Users', icon: Users, description: 'Manage user accounts and permissions' },
-    { id: 'classes' as AdminTab, label: 'Classes', icon: BookOpen, description: 'Manage class types and programs' },
-    { id: 'classLevels' as AdminTab, label: 'Class Levels', icon: Layers, description: 'Manage class levels and semesters' },
-    { id: 'subjects' as AdminTab, label: 'Subjects', icon: GraduationCap, description: 'Manage subjects for each class level' },
-    { id: 'content' as AdminTab, label: 'Content', icon: FileText, description: 'Manage learning materials and resources' }, // Reverted to 'content'
-    { id: 'advertisements' as AdminTab, label: 'Advertisements', icon: Image, description: 'Manage promotional content and banners' },
-    { id: 'payments' as AdminTab, label: 'Payment Management', icon: DollarSign, description: 'Review proofs, monitor logs, and grant access' },
-    { id: 'forum' as AdminTab, label: 'Forum', icon: MessageSquare, description: 'Manage forum discussions and topics' },
-    { id: 'queries' as AdminTab, label: 'Queries', icon: MessageCircleQuestion, description: 'Review user chat queries', notificationCount: unreadQueriesCount },
-    { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, description: 'Global system configuration' },
-    { id: 'profile' as AdminTab, label: 'Profile', icon: User, description: 'Manage your personal details' },
-  ];
+
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -227,7 +234,7 @@ export const AdminPage: React.FC = () => {
                 {(isSidebarOpen || isMobile) ? 'Management' : 'Mgmt'}
               </h3>
               <div className="space-y-1">
-                {tabs.map((tab) => {
+                {tabs.map((tab: any) => {
                   const Icon = tab.icon;
                   return (
                     <button
@@ -332,7 +339,7 @@ export const AdminPage: React.FC = () => {
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Current Tab</p>
                         <p className="font-semibold text-gray-800">
-                          {tabs.find(tab => tab.id === activeTab)?.label}
+                          {tabs.find((tab: any) => tab.id === activeTab)?.label}
                         </p>
                       </div>
                     </div>

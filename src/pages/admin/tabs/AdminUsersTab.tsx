@@ -1,17 +1,17 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useAdmin } from '../../../contexts/AdminContext';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
-import { Select } from '../../../components/ui/Select';
-import { useToast } from '../../../contexts/ToastContext';
-import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Modal } from '../../../components/ui/Modal';
-import { Edit, Trash2, Lock, Unlock, Search, Mail, Plus, Users, GraduationCap, Building2, UserPlus, XCircle, Loader2, FileSpreadsheet, FileText, Phone } from 'lucide-react';
-import { User, Class } from '../../../types';
-import { naturalSort } from '../../../utils/sorting';
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Building2, Edit, FileSpreadsheet, FileText, GraduationCap, Loader2, Lock, Mail, Phone, Plus, Search, Trash2, Unlock, UserPlus, Users, XCircle } from 'lucide-react';
+import React, { useCallback, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { Button } from '../../../components/ui/Button';
+import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../components/ui/Modal';
+import { Select } from '../../../components/ui/Select';
+import { useAdmin } from '../../../contexts/AdminContext';
+import { useToast } from '../../../contexts/ToastContext';
+import { Class, User } from '../../../types';
+import { naturalSort } from '../../../utils/sorting';
 
 export const AdminUsersTab: React.FC = () => {
   const {
@@ -36,6 +36,9 @@ export const AdminUsersTab: React.FC = () => {
   const [confirmEditPassword, setConfirmEditPassword] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
+  const [filterDateRange, setFilterDateRange] = useState<string>('all');
+  const [customDateStart, setCustomDateStart] = useState<string>('');
+  const [customDateEnd, setCustomDateEnd] = useState<string>('');
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -128,9 +131,36 @@ export const AdminUsersTab: React.FC = () => {
       const matchesSearch = uName.includes(term) || uEmail.includes(term) || uCol.includes(term) || uPhone.includes(term);
       const matchesFilter = filterRole === 'all' || (filterRole === user.role);
 
-      return matchesSearch && matchesFilter;
+      // Date Filtering Logic
+      let matchesDate = true;
+      if (filterDateRange !== 'all') {
+        const userDate = user.createdAt ? new Date(user.createdAt) : new Date();
+        const now = new Date();
+
+        // Reset time for accurate date comparison
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const lastWeek = new Date(today);
+        lastWeek.setDate(today.getDate() - 7);
+        const lastMonth = new Date(today);
+        lastMonth.setMonth(today.getMonth() - 1);
+
+        if (filterDateRange === 'today') {
+          matchesDate = userDate >= today;
+        } else if (filterDateRange === 'last_week') {
+          matchesDate = userDate >= lastWeek;
+        } else if (filterDateRange === 'last_month') {
+          matchesDate = userDate >= lastMonth;
+        } else if (filterDateRange === 'custom' && customDateStart && customDateEnd) {
+          const start = new Date(customDateStart);
+          const end = new Date(customDateEnd);
+          end.setHours(23, 59, 59, 999); // Include the entire end day
+          matchesDate = userDate >= start && userDate <= end;
+        }
+      }
+
+      return matchesSearch && matchesFilter && matchesDate;
     }).sort((a, b) => naturalSort(a.username || '', b.username || ''));
-  }, [users, searchTerm, filterRole]);
+  }, [users, searchTerm, filterRole, filterDateRange, customDateStart, customDateEnd]);
 
   const roleOptions = [
     { value: 'admin', label: 'Admin' },
@@ -141,6 +171,14 @@ export const AdminUsersTab: React.FC = () => {
     { value: 'all', label: 'All Roles' },
     { value: 'admin', label: 'Admins' },
     { value: 'student', label: 'Students' },
+  ];
+
+  const dateFilterOptions = [
+    { value: 'all', label: 'All Time' },
+    { value: 'today', label: 'Joined Today' },
+    { value: 'last_week', label: 'Joined Last Week' },
+    { value: 'last_month', label: 'Joined Last Month' },
+    { value: 'custom', label: 'Custom Range' },
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,7 +264,7 @@ export const AdminUsersTab: React.FC = () => {
 
   const handleAddUser = async () => {
     try {
-      if (!formData.email || !formData.username) throw new Error('Email/Username required');
+      if (!formData.email || !formData.username || !formData.phone) throw new Error('Email, Username, and Phone are required');
       if (!password || password.length < 6) throw new Error('Password min 6 chars');
       if (password !== confirmPassword) throw new Error('Passwords mismatch');
       await addUser({ ...formData as Omit<User, 'id'>, password });
@@ -381,6 +419,31 @@ export const AdminUsersTab: React.FC = () => {
             fullWidth
           />
         </div>
+        <div className="w-full md:w-48">
+          <Select
+            value={filterDateRange}
+            onChange={setFilterDateRange}
+            options={dateFilterOptions}
+            fullWidth
+          />
+        </div>
+        {filterDateRange === 'custom' && (
+          <div className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-300">
+            <input
+              type="date"
+              value={customDateStart}
+              onChange={(e) => setCustomDateStart(e.target.value)}
+              className="px-3 py-2 bg-white/60 border border-blue-50 rounded-xl text-sm focus:bg-white outline-none"
+            />
+            <span className="text-slate-400 text-xs font-bold uppercase">To</span>
+            <input
+              type="date"
+              value={customDateEnd}
+              onChange={(e) => setCustomDateEnd(e.target.value)}
+              className="px-3 py-2 bg-white/60 border border-blue-50 rounded-xl text-sm focus:bg-white outline-none"
+            />
+          </div>
+        )}
       </div>
 
       {/* Bulk User Actions */}

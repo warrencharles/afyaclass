@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { Navbar } from '../../components/layout/Navbar';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Footer } from '../../components/layout/Footer';
+import { Navbar } from '../../components/layout/Navbar';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { useAuth } from '../../contexts/AuthContext';
 
+import { Building, CheckCircle, ChevronLeft, ChevronRight, KeyRound, Lock, Mail, Smartphone, User } from 'lucide-react';
 import { Alert } from '../../components/ui/Alert';
-import { User, Mail, Smartphone, Building, KeyRound, CheckCircle, ChevronRight, ChevronLeft, Lock } from 'lucide-react';
-import { ClassType, Class } from '../../types';
+import { Class, ClassType } from '../../types';
 import { fetchClasses } from '../../utils/api';
 
 export const RegisterPage: React.FC = () => {
@@ -240,7 +240,7 @@ export const RegisterPage: React.FC = () => {
               className="neu-pressed !bg-[#ebf5fc] !border-none !shadow-none focus:!ring-0 rounded-xl"
             />
             <Input
-              label="Phone Number"
+              label="Phone Number *"
               id="phone"
               type="tel"
               value={phone}

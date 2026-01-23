@@ -211,14 +211,13 @@ function handle_login($requestMethod)
                     'classTypeNameFull' => $user['classTypeNameFull'],
                     'classLevel' => $user['classLevel'],
                     'role' => $user['role'],
-                    'role' => $user['role'],
+                    'isGlobalFreeAccessEnabled' => isGlobalFreeAccessEnabled(),
                     'hasMaterialAccess' => isGlobalFreeAccessEnabled() ? true : (bool) $user['hasMaterialAccess'],
                     'materialTrialStartTime' => $user['materialTrialStartTime'],
-                    'materialTrialEndTime' => $user['materialTrialEndTime'], // Ensure this is included
+                    'materialTrialEndTime' => $user['materialTrialEndTime'],
                     'materialPaidAccessEndTime' => $user['materialPaidAccessEndTime'],
                     'hasPendingPayment' => (bool) $user['hasPendingPayment'],
-                    // Removed hasExamAccess and related fields
-                    'isConfirmed' => $user['isConfirmed'], // Use the already cast boolean value
+                    'isConfirmed' => $user['isConfirmed'],
                 ];
 
                 // Format all date/time fields to ISO 8601 UTC
@@ -417,9 +416,9 @@ function handle_register($requestMethod)
         $classTypeNameFull = $data['classTypeNameFull'] ?? null;
         $classLevel = $data['classLevel'] ?? null;
 
-        if (!$email || !$username || !$password || !$classType) {
+        if (!$email || !$username || !$password || !$classType || !$phone) {
             http_response_code(400);
-            echo json_encode(['message' => 'Missing required registration fields: email, username, password, classType.']);
+            echo json_encode(['message' => 'Missing required registration fields: email, username, password, classType, phone.']);
             return;
         }
 
@@ -1146,7 +1145,8 @@ function handle_get_user($requestMethod, $userId)
             $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
 
             // Check for Global Free Access override
-            if (isGlobalFreeAccessEnabled()) {
+            $user['isGlobalFreeAccessEnabled'] = isGlobalFreeAccessEnabled();
+            if ($user['isGlobalFreeAccessEnabled']) {
                 $user['hasMaterialAccess'] = true;
             }
             $user['isConfirmed'] = (bool) $user['isConfirmed']; // Explicitly cast to boolean
@@ -1784,10 +1784,32 @@ function handle_validate_token($requestMethod)
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user) {
-                // Cast booleans for JSON consistency
                 $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
+
                 $user['hasPendingPayment'] = (bool) $user['hasPendingPayment'];
                 $user['isConfirmed'] = (bool) $user['isConfirmed'];
+                $user['isGlobalFreeAccessEnabled'] = isGlobalFreeAccessEnabled();
+                if ($user['isGlobalFreeAccessEnabled']) {
+                    $user['hasMaterialAccess'] = true;
+                }
+
+                // Format dates to ISO 8601 UTC
+                $dateFields = [
+                    'materialTrialStartTime',
+                    'materialTrialEndTime',
+                    'materialPaidAccessEndTime'
+                ];
+                foreach ($dateFields as $field) {
+                    if (isset($user[$field]) && $user[$field] !== null) {
+                        try {
+                            $date = new DateTime($user[$field], new DateTimeZone('UTC'));
+                            $user[$field] = $date->format(DateTime::ATOM);
+                        } catch (Exception $e) {
+                            error_log("Error formatting date field '{$field}': " . $e->getMessage());
+                            // Keep original value if formatting fails
+                        }
+                    }
+                }
 
                 http_response_code(200);
                 echo json_encode(['message' => 'Token is valid.', 'valid' => true, 'user' => $user]);

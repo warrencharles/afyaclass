@@ -231,6 +231,15 @@ try {
         case '/api/discussions':
             handle_discussions($requestMethod);
             break;
+        case '/settings/public':
+            require_once __DIR__ . '/../routes/settings.php';
+            handle_public_settings();
+            break;
+        case '/users/request-material-access':
+        case '/submit-payment-proof':
+            require_once __DIR__ . '/../routes/payment.php';
+            handle_submit_payment_proof($requestMethod);
+            break;
         case '/classes':
             handle_public_classes($requestMethod);
             break;
@@ -249,13 +258,15 @@ try {
         case '/admin/class-levels':
             handle_admin_class_levels($requestMethod);
             break;
-        case '/pricing-plans':
-            handle_pricing_plans($requestMethod);
+        case '/admin/payment-requests':
+            require_once __DIR__ . '/../routes/payment.php';
+            handle_admin_payment_requests($requestMethod, $urlParts[3] ?? null);
             break;
-        case '/users/request-material-access':
-            handle_request_material_access($requestMethod);
+        case '/admin/payment-requests/pending/count':
+            require_once __DIR__ . '/../routes/payment.php';
+            handle_admin_pending_payments_count($requestMethod);
             break;
-        case '/initiate-pesapal-payment':
+        case '/admin/pesapal-transactions':
             handle_initiate_pesapal_payment($requestMethod);
             break;
         case '/pesapal-ipn':
@@ -314,9 +325,6 @@ try {
             break;
         case '/users/start-material-trial':
             handle_start_material_trial($requestMethod);
-            break;
-        case '/submit-payment-proof':
-            handle_request_material_access($requestMethod);
             break;
         case '/pesapal-payment-status':
             handle_pesapal_payment_status($requestMethod);

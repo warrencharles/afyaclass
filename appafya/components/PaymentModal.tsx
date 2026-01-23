@@ -1,7 +1,8 @@
 import api from '@/constants/api';
 import { useAlert } from '@/context/AlertContext';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -31,10 +32,38 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
     const [loading, setLoading] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'weekly_material_access' | 'monthly_material_access'>('weekly_material_access');
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+    const [paymentMode, setPaymentMode] = useState<'pesapal' | 'manual'>('pesapal');
+    const [instructions, setInstructions] = useState('');
+    const [screenshot, setScreenshot] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
     // Form State
     const [name, setName] = useState(userName);
     const [email, setEmail] = useState(userEmail);
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const res = await api.get('/settings/public');
+                setPaymentMode(res.data.payment_mode || 'pesapal');
+                setInstructions(res.data.manual_payment_instructions || '');
+            } catch (e) {
+                console.log('Failed to load payment settings', e);
+            }
+        };
+        if (visible) loadSettings();
+    }, [visible]);
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            setScreenshot(result.assets[0]);
+        }
+    };
 
     const handleInitiatePayment = async () => {
         if (!name || !email) {
@@ -45,24 +74,62 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
         setLoading(true);
         try {
             const amount = selectedPlan === 'weekly_material_access' ? 1000 : 4000;
-            const payload = {
-                userId: String(userId), // Ensure string as per website logic
-                name,
-                email,
-                requestType: selectedPlan,
-                amount,
-            };
 
-            console.log('[Payment] Initiating Payload:', JSON.stringify(payload, null, 2));
-            const response = await api.post('/initiate-pesapal-payment', payload);
-            console.log('[Payment] Success Response:', response.data);
+            if (paymentMode === 'pesapal') {
+                const payload = {
+                    userId: String(userId),
+                    name,
+                    email,
+                    requestType: selectedPlan,
+                    amount,
+                };
 
-            const { redirectUrl } = response.data;
-            if (redirectUrl) {
-                setPaymentUrl(redirectUrl);
-                setStep('payment');
+                const response = await api.post('/initiate-pesapal-payment', payload);
+                const { redirectUrl } = response.data;
+                if (redirectUrl) {
+                    setPaymentUrl(redirectUrl);
+                    setStep('payment');
+                } else {
+                    showAlert({ title: 'Error', message: 'Failed to generate payment link.', type: 'error' });
+                }
             } else {
-                showAlert({ title: 'Error', message: 'Failed to generate payment link.', type: 'error' });
+                // Manual Proof
+                if (!screenshot) {
+                    showAlert({ title: 'Error', message: 'Please pick a screenshot of your payment.', type: 'error' });
+                    setLoading(false);
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('userId', String(userId));
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('requestType', selectedPlan);
+                formData.append('amount', String(amount));
+
+                // Correctly append file for React Native
+                const uri = screenshot.uri;
+                const nameArr = uri.split('/');
+                const fileName = nameArr[nameArr.length - 1];
+
+                // @ts-ignore
+                formData.append('paymentScreenshot', {
+                    uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+                    type: 'image/jpeg',
+                    name: fileName,
+                });
+
+                await api.post('/submit-payment-proof', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                showAlert({
+                    title: 'Submitted',
+                    message: 'Your payment proof has been submitted for review. Access will be granted once approved.',
+                    type: 'success'
+                });
+                if (onSuccess) onSuccess();
+                handleClose();
             }
         } catch (error: any) {
             console.log('[Payment] Error details:', error.response?.data || error.message);
@@ -159,12 +226,31 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
                 />
             </View>
 
+            {paymentMode === 'manual' && (
+                <View style={styles.manualContainer}>
+                    <View style={styles.instructionBox}>
+                        <View style={styles.labelRow}>
+                            <Ionicons name="information-circle" size={16} color="#2980b9" />
+                            <Text style={styles.manualLabel}>INSTRUCTIONS</Text>
+                        </View>
+                        <Text style={styles.instructionText}>{instructions || 'Please upload your payment receipt below.'}</Text>
+                    </View>
+
+                    <TouchableOpacity style={[styles.uploadBtn, screenshot && styles.hasScreenshot]} onPress={pickImage}>
+                        <Ionicons name={screenshot ? "checkmark-circle" : "image-outline"} size={20} color={screenshot ? "#2e7d32" : "#7f8c8d"} />
+                        <Text style={[styles.uploadBtnText, screenshot && styles.hasScreenshotText]}>
+                            {screenshot ? 'Screenshot Selected' : 'Upload Receipt Screenshot'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.payButton} onPress={handleInitiatePayment} disabled={loading}>
+                <TouchableOpacity style={[styles.payButton, paymentMode === 'manual' && styles.manualSubmitBtn]} onPress={handleInitiatePayment} disabled={loading}>
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.payButtonText}>Pay Now</Text>
+                        <Text style={styles.payButtonText}>{paymentMode === 'pesapal' ? 'Pay Now' : 'Submit Proof'}</Text>
                     )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={handleClose} disabled={loading}>
@@ -174,7 +260,7 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
 
             <View style={styles.secureBadge}>
                 <Ionicons name="lock-closed" size={12} color="#95a5a6" />
-                <Text style={styles.secureText}>Secured by Pesapal</Text>
+                <Text style={styles.secureText}>{paymentMode === 'pesapal' ? 'Secured by Pesapal' : 'Review by Admin'}</Text>
             </View>
         </View>
     );
@@ -354,5 +440,63 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#fff',
+    },
+    // Manual Proof Styles
+    manualContainer: {
+        marginBottom: 20,
+    },
+    instructionBox: {
+        backgroundColor: '#e3f2fd',
+        padding: 16,
+        borderRadius: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#3498db',
+        marginBottom: 16,
+    },
+    labelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 6,
+    },
+    manualLabel: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#2980b9',
+        letterSpacing: 1,
+    },
+    instructionText: {
+        fontSize: 13,
+        color: '#34495e',
+        lineHeight: 18,
+        fontWeight: '500',
+    },
+    uploadBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 14,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#dcdde1',
+        borderStyle: 'dashed',
+    },
+    hasScreenshot: {
+        borderColor: '#2e7d32',
+        backgroundColor: '#e8f5e9',
+        borderStyle: 'solid',
+    },
+    uploadBtnText: {
+        fontSize: 14,
+        color: '#7f8c8d',
+        fontWeight: 'bold',
+    },
+    hasScreenshotText: {
+        color: '#2e7d32',
+    },
+    manualSubmitBtn: {
+        backgroundColor: '#3498db',
     }
 });

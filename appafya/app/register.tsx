@@ -199,7 +199,7 @@ export default function RegisterScreen() {
             />
             <TextInput
                 style={styles.input}
-                placeholder="Phone Number"
+                placeholder="Phone Number *"
                 placeholderTextColor="#7f8c8d"
                 keyboardType="phone-pad"
                 value={formData.phone}

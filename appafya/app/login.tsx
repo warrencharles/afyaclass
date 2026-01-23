@@ -192,20 +192,22 @@ const styles = StyleSheet.create({
     header: {
         alignItems: 'center',
         marginBottom: 40,
+        width: '100%',
     },
     title: {
         fontSize: 32,
         fontWeight: 'bold',
         color: '#2c3e50',
         marginBottom: 10,
-        flexWrap: 'wrap',
         textAlign: 'center',
+        width: '100%',
     },
     subtitle: {
         fontSize: 16,
         color: '#7f8c8d',
-        flexWrap: 'wrap',
         textAlign: 'center',
+        width: '100%',
+        minWidth: 200,
     },
     form: {
         width: '100%',

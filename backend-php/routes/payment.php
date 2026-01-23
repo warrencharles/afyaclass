@@ -408,3 +408,88 @@ function handle_admin_manage_subscription($requestMethod)
         echo json_encode(['message' => 'Method Not Allowed']);
     }
 }
+
+function handle_submit_payment_proof($requestMethod)
+{
+    global $pdo;
+
+    if ($requestMethod !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['message' => 'Method Not Allowed']);
+        return;
+    }
+
+    $userId = $_POST['userId'] ?? null;
+    $name = $_POST['name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $requestType = $_POST['requestType'] ?? '';
+    $amount = $_POST['amount'] ?? 0;
+
+    if (!$userId || !isset($_FILES['paymentScreenshot'])) {
+        http_response_code(400);
+        echo json_encode(['message' => 'User ID and payment screenshot are required.']);
+        return;
+    }
+
+    $file = $_FILES['paymentScreenshot'];
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['message' => 'File upload failed.']);
+        return;
+    }
+
+    $uploadDir = __DIR__ . '/../public/uploads/payments/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $fileExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $fileName = 'proof_' . $userId . '_' . time() . '.' . $fileExtension;
+    $targetPath = $uploadDir . $fileName;
+    $dbPath = '/uploads/payments/' . $fileName;
+
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO payment_requests (userId, name, email, paymentScreenshotUrl, requestType, amount, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
+            $stmt->execute([$userId, $name, $email, $dbPath, $requestType, $amount]);
+
+            // Set pending status in users table
+            $stmtUpdate = $pdo->prepare("UPDATE users SET hasPendingPayment = 1 WHERE id = ?");
+            $stmtUpdate->execute([$userId]);
+
+            require_once __DIR__ . '/notifications.php';
+            // Notify user
+            createNotification($userId, 'payment_proof_submitted', "Your payment proof for " . str_replace('_', ' ', $requestType) . " has been submitted and is awaiting review.", null);
+            
+            // Notify Admins
+            notifyAdmins('payment_proof_submitted', "New payment proof submitted by $name for " . str_replace('_', ' ', $requestType) . ".", $userId, (int)$userId, 'payment_request');
+
+            http_response_code(201);
+            echo json_encode(['message' => 'Payment proof submitted successfully!']);
+        } catch (PDOException $e) {
+            error_log("Proof submission DB error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['message' => 'Database error recording proof.']);
+        }
+    }
+}
+
+function handle_admin_pending_payments_count($requestMethod)
+{
+    global $pdo;
+
+    if ($requestMethod === 'GET') {
+        try {
+            $stmt = $pdo->query("SELECT COUNT(*) as count FROM payment_requests WHERE status = 'pending'");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            http_response_code(200);
+            echo json_encode(['count' => (int)$result['count']]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['message' => 'Error fetching pending payments count.', 'error' => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['message' => 'Method Not Allowed']);
+    }
+}

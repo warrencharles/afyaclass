@@ -72,3 +72,35 @@ function handle_admin_system_settings($requestMethod)
         echo json_encode(['message' => 'Method Not Allowed']);
     }
 }
+
+function handle_public_settings()
+{
+    global $pdo;
+    try {
+        $keys = ['payment_mode', 'manual_payment_instructions', 'global_free_access'];
+        $placeholders = implode(',', array_fill(0, count($keys), '?'));
+        $stmt = $pdo->prepare("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ($placeholders)");
+        $stmt->execute($keys);
+        $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        $formattedSettings = [];
+        foreach ($settings as $key => $value) {
+            if ($value === 'true') {
+                $formattedSettings[$key] = true;
+            } elseif ($value === 'false') {
+                $formattedSettings[$key] = false;
+            } else {
+                $formattedSettings[$key] = $value;
+            }
+        }
+
+        // Set defaults if missing
+        if (!isset($formattedSettings['payment_mode'])) $formattedSettings['payment_mode'] = 'pesapal';
+
+        http_response_code(200);
+        echo json_encode($formattedSettings);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['message' => 'Failed to fetch public settings.']);
+    }
+}

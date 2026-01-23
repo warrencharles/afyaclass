@@ -72,7 +72,12 @@ export default function ProfileScreen() {
     };
 
     const handleSaveProfile = async () => {
-        setSaving(true);
+        if (!formData.phone.trim()) {
+            showAlert({ title: "Error", message: "Phone number is required.", type: 'error' });
+            setSaving(false);
+            return;
+        }
+
         try {
             // Mock API call - replace with actual endpoint e.g., api.post('/update-profile', formData)
             // await api.post('/user/update', { ...formData, id: user?.id });
@@ -265,7 +270,7 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>Phone Number *</Text>
                 <TextInput
                     style={styles.input}
                     value={formData.phone}

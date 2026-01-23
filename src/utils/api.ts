@@ -1,6 +1,6 @@
 import axios from 'axios';
+import { Advertisement, ChatConversation, ChatMessage, Class, ClassLevel } from '../types'; // Corrected import path for types
 import axiosClient from './axiosClient'; // Import the new axiosClient
-import { Class, ClassLevel, UserQuery, ChatMessage, ChatConversation, Advertisement } from '../types'; // Corrected import path for types
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://afyaclass.co.tz/backend-php/public"; // Use VITE_API_BASE_URL
 
@@ -232,6 +232,12 @@ export const fetchSystemSettings = async (): Promise<Record<string, any>> => {
 export const updateSystemSettings = async (key: string, value: any) => {
   const response = await axiosClient.post('/admin/settings', { key, value });
   return response.data;
+};
+
+// Utility function to fetch pending payment requests count (admin only)
+export const fetchPendingPaymentRequestsCount = async (): Promise<number> => {
+  const response = await axiosClient.get('/admin/payment-requests/pending/count');
+  return response.data.count;
 };
 
 export default axiosClient; // Export the new axiosClient as default

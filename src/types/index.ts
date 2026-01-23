@@ -12,20 +12,19 @@ export interface User {
   classTypeNameFull?: string; // New field for full program name
   classLevel: string;
   role: UserRole;
-  hasMaterialAccess?: boolean; // New field for general material access
-  materialTrialStartTime?: string | null; // DATETIME from backend, will be string or null in frontend
-  materialTrialEndTime?: string | null; // New field for material trial end time
-  materialPaidAccessEndTime?: string | null; // New field for general material paid access end time
-  password?: string; // Add optional password field
-  hasPendingPayment?: boolean; // New field to indicate if user has a pending payment request
-  isConfirmed?: boolean; // New field for email confirmation status
-  confirmation_token?: string | null; // New field for storing email confirmation token
-  token: string | null; // New field for JWT token, can be string or null
-  device_id: string | null; // New field to store the current device ID
-  canAccessExams?: boolean; // Derived field: true if hasMaterialAccess
-  canAccessExamGuides?: boolean; // Derived field: true if hasMaterialAccess
-  // Fields for admin to set trial time (not stored in DB, only for update requests)
-  setMaterialTrialHours?: number; // New field for admin to set material trial time
+  hasMaterialAccess?: boolean;
+  isGlobalFreeAccessEnabled?: boolean;
+  materialTrialStartTime?: string | null;
+  materialTrialEndTime?: string | null;
+  materialPaidAccessEndTime?: string | null;
+  password?: string;
+  hasPendingPayment?: boolean;
+  isConfirmed?: boolean;
+  confirmation_token?: string | null;
+  token: string | null;
+  device_id: string | null;
+  setMaterialTrialHours?: number;
+  createdAt?: string;
 }
 
 export interface Session {

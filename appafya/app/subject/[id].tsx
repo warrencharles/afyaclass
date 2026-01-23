@@ -47,21 +47,27 @@ export default function SubjectDetailScreen() {
 
     useEffect(() => {
         // Detailed filtering logic for tabs
+        const naturalSort = (a: Material, b: Material) => {
+            return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        };
+
+        let filtered: Material[] = [];
         if (activeTab === 'notes') {
-            setFilteredMaterials(materials.filter(m => m.type === 'note'));
+            filtered = materials.filter(m => m.type === 'note');
         } else if (activeTab === 'books') {
-            setFilteredMaterials(materials.filter(m => m.type === 'book'));
+            filtered = materials.filter(m => m.type === 'book');
         } else if (activeTab === 'nactvet') {
-            setFilteredMaterials(materials.filter(m => m.type === 'nactvet'));
+            filtered = materials.filter(m => m.type === 'nactvet');
         } else if (activeTab === 'exams') {
-            setFilteredMaterials(materials.filter(m => m.type === 'exam'));
+            filtered = materials.filter(m => m.type === 'exam');
         } else if (activeTab === 'examGuides') {
-            setFilteredMaterials(materials.filter(m => m.type === 'examGuide'));
+            filtered = materials.filter(m => m.type === 'examGuide');
         } else if (activeTab === 'videos') {
-            setFilteredMaterials(materials.filter(m => m.type === 'video'));
+            filtered = materials.filter(m => m.type === 'video');
         } else if (activeTab === 'practicals') {
-            setFilteredMaterials(materials.filter(m => m.type === 'practical'));
+            filtered = materials.filter(m => m.type === 'practical');
         }
+        setFilteredMaterials(filtered.sort(naturalSort));
     }, [activeTab, materials]);
     // ... (fetching code) ...
     // ... (fetching code) ...

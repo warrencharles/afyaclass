@@ -1,5 +1,5 @@
+import { FileText } from 'lucide-react';
 import React, { useMemo } from 'react';
-import { Clock, FileText, ClipboardList } from 'lucide-react';
 import { User } from '../../types';
 import CountdownTimer from './CountdownTimer';
 
@@ -10,6 +10,7 @@ interface AccessStatusSectionProps {
 
 export const AccessStatusSection: React.FC<AccessStatusSectionProps> = ({ user, onAccessEnd }) => {
     const calculateRemainingTime = (endTime: string | null | undefined, startTime: string | null | undefined, hasAccess: boolean | undefined, durationMinutes = 15) => {
+        if (user?.isGlobalFreeAccessEnabled) return 0;
         if (hasAccess && endTime) {
             // Paid access
             const end = new Date(endTime).getTime();
@@ -25,48 +26,16 @@ export const AccessStatusSection: React.FC<AccessStatusSectionProps> = ({ user, 
         return 0;
     };
 
-    const examTime = useMemo(() => {
-        if (user?.hasExamAccess) return calculateRemainingTime(user.examPaidAccessEndTime, null, true);
-        return calculateRemainingTime(null, user?.examTrialStartTime, false);
-    }, [user?.examPaidAccessEndTime, user?.examTrialStartTime, user?.hasExamAccess]);
-
-    const examGuideTime = useMemo(() => {
-        if (user?.hasExamGuideAccess) return calculateRemainingTime(user.examGuidePaidAccessEndTime, null, true);
-        return calculateRemainingTime(null, user?.examGuideTrialStartTime, false);
-    }, [user?.examGuidePaidAccessEndTime, user?.examGuideTrialStartTime, user?.hasExamGuideAccess]);
 
     const materialTime = useMemo(() => {
+        if (user?.isGlobalFreeAccessEnabled) return 0;
         // Material logic had some specific checks in original code, simplifying here but respecting priority
         if (user?.hasMaterialAccess) return calculateRemainingTime(user.materialPaidAccessEndTime, null, true);
         return calculateRemainingTime(user?.materialTrialEndTime, user?.materialTrialStartTime, false);
-    }, [user?.materialPaidAccessEndTime, user?.materialTrialEndTime, user?.materialTrialStartTime, user?.hasMaterialAccess]);
+    }, [user?.materialPaidAccessEndTime, user?.materialTrialEndTime, user?.materialTrialStartTime, user?.hasMaterialAccess, user?.isGlobalFreeAccessEnabled]);
 
 
     const statuses = [
-        {
-            id: 'exam',
-            label: 'Exams',
-            isActive: user?.hasExamAccess || (user?.examTrialStartTime && examTime > 0),
-            isPaid: user?.hasExamAccess,
-            time: examTime,
-            icon: Clock,
-            bg: 'bg-red-50',
-            border: 'border-red-100',
-            text: 'text-red-700',
-            iconColor: 'text-red-500'
-        },
-        {
-            id: 'examGuide',
-            label: 'Exam Guides',
-            isActive: user?.hasExamGuideAccess || (user?.examGuideTrialStartTime && examGuideTime > 0),
-            isPaid: user?.hasExamGuideAccess,
-            time: examGuideTime,
-            icon: ClipboardList,
-            bg: 'bg-orange-50',
-            border: 'border-orange-100',
-            text: 'text-orange-700',
-            iconColor: 'text-orange-500'
-        },
         {
             id: 'material',
             label: 'Materials',

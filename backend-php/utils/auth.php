@@ -155,10 +155,12 @@ function authenticate()
             // Explicitly cast boolean-like fields
             $user['hasPendingPayment'] = (bool) $user['hasPendingPayment'];
             $user['hasMaterialAccess'] = (bool) $user['hasMaterialAccess'];
+            
             $user['isConfirmed'] = (bool) $user['isConfirmed'];
 
             // Check for Global Free Access override
-            if (isGlobalFreeAccessEnabled()) {
+            $user['isGlobalFreeAccessEnabled'] = isGlobalFreeAccessEnabled();
+            if ($user['isGlobalFreeAccessEnabled']) {
                 $user['hasMaterialAccess'] = true;
             }
 
