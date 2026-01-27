@@ -5,18 +5,22 @@ import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-    const { signOut } = useAuth();
+    const { signOut, user: contextUser, updateUser: updateContextUser } = useAuth();
     const { showAlert } = useAlert();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(contextUser);
+    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // Robust pending check
+    const isPending = (user?.materialAccessStatus?.toLowerCase() === 'pending' ||
+        user?.material_access_status?.toLowerCase() === 'pending');
 
     // Personal Details State
     const [formData, setFormData] = useState({
@@ -39,8 +43,21 @@ export default function ProfileScreen() {
 
     const fetchProfile = async () => {
         try {
-            const infoStr = await SecureStore.getItemAsync('userInfo');
-            let currentUser = infoStr ? JSON.parse(infoStr) : null;
+            let currentUser = contextUser;
+
+            if (!currentUser) {
+                // Fallback to storage
+                const infoStr = await SecureStore.getItemAsync('userInfo');
+                if (infoStr) currentUser = JSON.parse(infoStr);
+            }
+
+            if (!currentUser) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+
+            setUser(currentUser);
 
             if (currentUser && (currentUser.id || currentUser.userId)) {
                 const id = currentUser.id || currentUser.userId;
@@ -48,7 +65,8 @@ export default function ProfileScreen() {
                     const res = await api.get(`/user/${id}`);
                     if (res.data) {
                         currentUser = res.data;
-                        await SecureStore.setItemAsync('userInfo', JSON.stringify(res.data));
+                        await updateContextUser(currentUser);
+                        setUser(currentUser);
                     }
                 } catch (err) {
                     console.log('Background fetch failed, using cache');
@@ -56,12 +74,11 @@ export default function ProfileScreen() {
             }
 
             if (currentUser) {
-                setUser(currentUser);
                 setFormData({
                     username: currentUser.username || '',
                     email: currentUser.email || '',
                     phone: currentUser.phone || '',
-                    educationCenter: currentUser.schoolName || '', // Assuming schoolName exists or is empty
+                    educationCenter: currentUser.schoolName || '',
                 });
             }
         } catch (e) {
@@ -89,8 +106,8 @@ export default function ProfileScreen() {
 
             // Optimistic update
             const updatedUser = { ...user!, ...formData };
+            await updateContextUser(updatedUser);
             setUser(updatedUser);
-            await SecureStore.setItemAsync('userInfo', JSON.stringify(updatedUser));
 
         } catch (error) {
             showAlert({ title: "Error", message: "Failed to update profile. Please try again.", type: 'error' });
@@ -205,15 +222,24 @@ export default function ProfileScreen() {
                     </Text>
                 </View>
 
-                {/* Upgrade Button if not premium */}
+                {/* Upgrade Button or Pending Status */}
                 {user?.role?.toLowerCase() !== 'premium' && (
-                    <TouchableOpacity
-                        style={styles.upgradeBtn}
-                        onPress={() => setShowPaymentModal(true)}
-                    >
-                        <Ionicons name="sparkles" size={12} color="#fff" />
-                        <Text style={styles.upgradeBtnText}>Upgrade Plan</Text>
-                    </TouchableOpacity>
+                    <>
+                        {isPending ? (
+                            <View style={[styles.upgradeBtn, { backgroundColor: '#fff9c4', borderColor: '#fbc02d', borderWidth: 1 }]}>
+                                <Ionicons name="time" size={12} color="#f57f17" />
+                                <Text style={[styles.upgradeBtnText, { color: '#f57f17' }]}>Pending Review</Text>
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.upgradeBtn}
+                                onPress={() => setShowPaymentModal(true)}
+                            >
+                                <Ionicons name="sparkles" size={12} color="#fff" />
+                                <Text style={styles.upgradeBtnText}>Upgrade Plan</Text>
+                            </TouchableOpacity>
+                        )}
+                    </>
                 )}
             </View>
         </View>

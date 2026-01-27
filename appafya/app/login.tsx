@@ -1,7 +1,7 @@
 import LoadingOverlay from '@/components/LoadingOverlay';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import api from '../constants/api';
 import { useAlert } from '../context/AlertContext';
@@ -58,8 +58,8 @@ export default function LoginScreen() {
 
             console.log('Login response:', JSON.stringify(response.data));
 
-            if (response.data && response.data.token) {
-                await signIn(response.data.token);
+            if (response.data && response.data.token && response.data.user) {
+                await signIn(response.data.token, response.data.user);
 
                 if (response.data.sessionId) {
                     if (Platform.OS !== 'web') {
@@ -68,20 +68,6 @@ export default function LoginScreen() {
                         localStorage.setItem('deviceId', response.data.sessionId);
                     }
                 }
-
-                if (response.data.user) {
-                    if (Platform.OS !== 'web') {
-                        await SecureStore.setItemAsync('userInfo', JSON.stringify(response.data.user));
-                    } else if (typeof localStorage !== 'undefined') {
-                        localStorage.setItem('userInfo', JSON.stringify(response.data.user));
-                    }
-                }
-
-                // Ensure at least 2 seconds have passed for the animation
-                // const elapsed = Date.now() - startTime;
-                // if (elapsed < 2000) {
-                //     await new Promise(resolve => setTimeout(resolve, 2000 - elapsed));
-                // }
 
                 router.replace('/(tabs)');
             } else {

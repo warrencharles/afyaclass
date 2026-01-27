@@ -11,6 +11,7 @@ export interface User {
     classLevel?: string; // e.g. "CMT 4"
     createdAt?: string; // ISO date string
     created_at?: string;
+    full_name?: string;
     date_joined?: string;
 
     // Access Flags
@@ -20,11 +21,14 @@ export interface User {
     materialTrialStartTime?: string;
     isGlobalFreeAccessEnabled?: boolean;
     is_global_free_access_enabled?: boolean; // Backend variant
+    has_material_access?: boolean; // Backend variant
 
     // Snake case variations often returned by Laravel
     material_paid_access_end_time?: string;
     material_trial_end_time?: string;
     material_trial_start_time?: string;
+    materialAccessStatus?: 'pending' | 'approved' | 'none'; // New status field
+    material_access_status?: 'pending' | 'approved' | 'none'; // Backend variant
 }
 
 export interface ClassLevel {

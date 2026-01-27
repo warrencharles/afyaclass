@@ -1,6 +1,7 @@
 import AppModal from '@/components/AppModal';
 import CountdownTimer from '@/components/CountdownTimer';
 import NotificationIcon from '@/components/NotificationIcon';
+import PaymentModal from '@/components/PaymentModal';
 import SubjectCard from '@/components/SubjectCard';
 import api from '@/constants/api';
 import { ClassLevel, Subject, User } from '@/constants/types';
@@ -10,14 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Dimensions, FlatList, Image, Linking, Platform, RefreshControl, StatusBar, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const { signOut } = useAuth();
+  const { signOut, user: contextUser, updateUser } = useAuth();
   const { showAlert } = useAlert();
-  const [userInfo, setUserInfo] = useState<User | null>(null);
+  const [userInfo, setUserInfo] = useState<User | null>(contextUser);
   const router = useRouter();
 
   // Data State
@@ -27,8 +28,11 @@ export default function HomeScreen() {
   // Filters State
   const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>('1');
+  const isPending = (userInfo?.materialAccessStatus?.toLowerCase() === 'pending' ||
+    userInfo?.material_access_status?.toLowerCase() === 'pending');
   const [banners, setBanners] = useState<any[]>([]);
   const [filteredSubjects, setFilteredSubjects] = useState<Subject[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Carousel State
   const flatListRef = React.useRef<FlatList>(null);
@@ -54,12 +58,13 @@ export default function HomeScreen() {
     userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled
   );
 
-  // Sync Ref with State
+  // Sync State with contextUser
   useEffect(() => {
-    if (userInfo) {
-      prevIsGlobalFreeAccess.current = userInfo.isGlobalFreeAccessEnabled || userInfo.is_global_free_access_enabled;
+    if (contextUser) {
+      setUserInfo(contextUser);
+      prevIsGlobalFreeAccess.current = contextUser.isGlobalFreeAccessEnabled || contextUser.is_global_free_access_enabled;
     }
-  }, [userInfo]);
+  }, [contextUser]);
 
   useEffect(() => {
     let interval: any;
@@ -70,44 +75,46 @@ export default function HomeScreen() {
         if (!id) return;
 
         // Silent fetch
-        const res = await api.get(`/users/${id}`);
+        const res = await api.get(`/user/${id}`);
         const freshData = res.data;
 
         if (!freshData) return;
 
-        // 1. Detect Change in Global Access
-        const isGlobal = freshData.isGlobalFreeAccessEnabled || freshData.is_global_free_access_enabled;
-        const wasGlobal = prevIsGlobalFreeAccess.current;
+        // --- Helper for robust boolean check ---
+        const normalizeBool = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
 
+        // 1. Detect and Normalize Global Access
+        const isGlobal = normalizeBool(freshData.isGlobalFreeAccessEnabled !== undefined ? freshData.isGlobalFreeAccessEnabled : freshData.is_global_free_access_enabled);
+
+        // 2. Normalize Paid Access
+        const hasPaid = normalizeBool(freshData.hasMaterialAccess !== undefined ? freshData.hasMaterialAccess : freshData.has_material_access);
+
+        // Force update both keys to ensure consistency and overwrite stale data in state/storage
+        freshData.isGlobalFreeAccessEnabled = isGlobal;
+        freshData.is_global_free_access_enabled = isGlobal;
+        freshData.hasMaterialAccess = hasPaid;
+        freshData.has_material_access = hasPaid;
+
+        // Notification for Global Access change
+        const wasGlobal = prevIsGlobalFreeAccess.current;
         if (wasGlobal !== undefined && isGlobal !== wasGlobal) {
-          const msg = isGlobal 
+          const msg = isGlobal
             ? 'Global Free Access has been enabled by the admin!'
             : 'Global Free Access has ended.';
-          
-          console.log('[Polling]', msg);
+
           if (Platform.OS === 'android') {
             ToastAndroid.show(msg, ToastAndroid.LONG);
           }
         }
 
-        // 2. Update State Instantly
-        setUserInfo(prev => {
-          // Merge to ensure we don't lose other fields
-          const updated = { ...prev, ...freshData };
-          
-          // Persist to storage
-          if (Platform.OS !== 'web') {
-            SecureStore.setItemAsync('userInfo', JSON.stringify(updated));
-          } else if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('userInfo', JSON.stringify(updated));
-          }
-          
-          return updated;
-        });
+        // 3. Update State & Persist via AuthContext
+        const updated = { ...userInfo, ...freshData };
+        await updateUser(updated);
+
+        return updated;
 
       } catch (err) {
         // Silent fail on polling errors
-        // console.log('[Polling] Error:', err);
       }
     };
 
@@ -118,7 +125,7 @@ export default function HomeScreen() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [userInfo?.id]); // Depend on ID to restart on user switch
+  }, [userInfo?.id]);
 
   // UI State
   const [loading, setLoading] = useState(true);
@@ -131,19 +138,41 @@ export default function HomeScreen() {
   // Initial Data Fetch
   const fetchDashboardData = async () => {
     try {
-      // 1. Get User Info
-      let currentUser = userInfo;
-      if (!currentUser) {
+      // 1. Get User Info from Context or Storage
+      let storedUser = contextUser;
+
+      if (!storedUser) {
+        // Fallback to storage if context is empty (shouldn't happen if user is logged in)
         if (Platform.OS !== 'web') {
           const infoStr = await SecureStore.getItemAsync('userInfo');
-          if (infoStr) currentUser = JSON.parse(infoStr);
+          if (infoStr) storedUser = JSON.parse(infoStr);
         } else if (typeof localStorage !== 'undefined') {
           const infoStr = localStorage.getItem('userInfo');
-          if (infoStr) currentUser = JSON.parse(infoStr);
+          if (infoStr) storedUser = JSON.parse(infoStr);
         }
       }
-      if (currentUser) setUserInfo(currentUser);
-      const userId = currentUser?.id || currentUser?.userId;
+
+      // 2. DETECT USER CHANGE: Only reset state if the user is different or we have NO user in memory
+      const storedId = storedUser?.id || storedUser?.userId;
+      const currentId = userInfo?.id || userInfo?.userId;
+
+      if (!storedUser || storedId !== currentId) {
+        console.log('[Dashboard] User changed or first load. Resetting state.');
+        setAllSubjects([]);
+        setFilteredSubjects([]);
+        setClassLevels([]);
+        setBanners([]);
+        setLoading(true); // Show spinner for fresh loads/user changes
+      }
+
+      if (!storedUser) {
+        setUserInfo(null);
+        setLoading(false);
+        return;
+      }
+
+      setUserInfo(storedUser);
+      const userId = storedUser.id || storedUser.userId;
 
       console.log('[Dashboard] Fetching with User ID:', userId);
 
@@ -153,7 +182,7 @@ export default function HomeScreen() {
         api.get('/class-levels'),
         api.get('/subjects'), // Back to the list of subjects, handled by interceptor
         api.get('/advertisements'), // Fetch banners
-        userId ? api.get(`/users/${userId}`) : Promise.reject('No User ID') // Refresh User Profile
+        userId ? api.get(`/user/${userId}`) : Promise.reject('No User ID') // Refresh User Profile
       ]);
 
       // --- NEW: Process User Profile Refresh (Fix for Revocation Persistence) ---
@@ -161,18 +190,24 @@ export default function HomeScreen() {
         const freshUserData = userProfileRes.value.data;
         console.log('[Dashboard] User profile refreshed. Access:', freshUserData.hasMaterialAccess);
 
-        // Merge with existing session token if needed, or just update userInfo
-        // We assume freshUserData contains the fields we care about
-        // Maintain the token if it's not in the response (usually isn't in a profile fetch)
-        const updatedUser = { ...currentUser, ...freshUserData };
-
-        setUserInfo(updatedUser);
-        if (Platform.OS !== 'web') {
-          await SecureStore.setItemAsync('userInfo', JSON.stringify(updatedUser));
-        } else if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        // --- Fix: Normalize Global Access Flag (Handle string '0'/'1' or boolean) ---
+        const isGlobalRaw = freshUserData.isGlobalFreeAccessEnabled !== undefined ? freshUserData.isGlobalFreeAccessEnabled : freshUserData.is_global_free_access_enabled;
+        let isGlobal = isGlobalRaw;
+        if (typeof isGlobalRaw === 'string') {
+          isGlobal = isGlobalRaw === '1' || isGlobalRaw === 'true';
+        } else if (typeof isGlobalRaw === 'number') {
+          isGlobal = isGlobalRaw === 1;
         }
-        currentUser = updatedUser; // Update local ref for further logic
+        // Force update both keys to ensure consistency and overwrite stale data
+        freshUserData.isGlobalFreeAccessEnabled = isGlobal;
+        freshUserData.is_global_free_access_enabled = isGlobal;
+        // -----------------------------------------------------------------------------
+
+        // Merge with existing session token if needed, or just update userInfo
+        const updatedUser = { ...storedUser, ...freshUserData };
+
+        await updateUser(updatedUser);
+        storedUser = updatedUser; // Update local ref for further logic
       } else {
         console.warn('[Dashboard] Failed to refresh user profile:', userProfileRes.reason);
       }
@@ -191,8 +226,8 @@ export default function HomeScreen() {
 
       if (levelsRes.status === 'fulfilled') {
         levels = Array.isArray(levelsRes.value.data) ? levelsRes.value.data : [];
-        if (currentUser?.classType || currentUser?.classLevel) {
-          const rawId = (currentUser?.classType || currentUser?.classLevel || '').toUpperCase();
+        if (storedUser?.classType || storedUser?.classLevel) {
+          const rawId = (storedUser?.classType || storedUser?.classLevel || '').toUpperCase();
           const prefixMatch = rawId.match(/^[A-Z]+/);
           const cleanPrefix = prefixMatch ? prefixMatch[0] : '';
 
@@ -266,7 +301,7 @@ export default function HomeScreen() {
 
       // 5. Set Defaults
       if (levels.length > 0 && !selectedLevelId) {
-        const userLevelName = currentUser?.classLevel;
+        const userLevelName = storedUser?.classLevel;
         const defaultLevel = levels.find(l => l.name === userLevelName) || levels[0];
         setSelectedLevelId(defaultLevel.id);
       }
@@ -342,67 +377,59 @@ export default function HomeScreen() {
     return classLevels.find(l => l.id === selectedLevelId)?.name || 'Select Class';
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      {/* Top Bar: Greeting + Forum/Logout */}
-      <View style={styles.topRow}>
-        <View>
-          <Text style={styles.greeting}>Habari,</Text>
-          <Text style={styles.username}>{userInfo?.name || userInfo?.username || 'Student'}</Text>
+  // Stabilize renderHeader to prevent NotificationIcon modal from closing on re-renders
+  const renderHeader = useCallback(() => {
+    // Helper for robust boolean check
+    const isTrue = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
+    const isGlobalFree = isTrue(userInfo?.isGlobalFreeAccessEnabled) || isTrue(userInfo?.is_global_free_access_enabled);
+    const hasPaidAccess = isTrue(userInfo?.hasMaterialAccess) || isTrue(userInfo?.has_material_access);
+    const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
+    const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+    // isPending is now component-scoped
 
-          {/* ACCESS STATUS INDICATORS */}
-          {(() => {
-            // Helper to get diverse property names (Handle both camelCase and snake_case)
-            const isGlobalFree = userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled;
-            const hasPaidAccess = userInfo?.hasMaterialAccess || userInfo?.has_material_access;
-            const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
-            const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+    return (
+      <View style={styles.header}>
+        {/* Top Bar: Greeting + Forum/Logout */}
+        <View style={styles.topRow}>
+          <View>
+            <Text style={styles.greeting}>Habari,</Text>
+            <Text style={styles.username}>{userInfo?.full_name || userInfo?.name || userInfo?.username || 'Guest'}</Text>
 
-            // 1. GLOBAL FREE ACCESS (Highest Priority)
-            if (isGlobalFree) {
-              return (
-                <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e8f5e9', padding: 6, borderRadius: 8, alignSelf: 'flex-start' }}>
-                  <Ionicons name="gift-outline" size={16} color="#2e7d32" />
-                  <Text style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: 12 }}>Global Free Access Active</Text>
-                </View>
-              );
-            }
-
-            // 2. PAID ACCESS (Medium Priority)
-            // Show if user has access AND it's not a generic permanent unlock (requires end time to show timer)
-            if (hasPaidAccess && paidEndTime) {
-              return (
-                <View style={{ marginTop: 6 }}>
-                  <CountdownTimer
-                    targetDate={paidEndTime}
-                    label="Subscription Ends In:"
-                    onExpire={() => {
-                      console.log('Subscription Expired in UI');
-                      fetchDashboardData();
-                    }}
-                  />
-                </View>
-              );
-            }
-
-            // 3. TRIAL ACCESS (Lowest Priority)
-            if (trialStartStr) {
+            {/* ACCESS STATUS INDICATORS */}
+            {isGlobalFree ? (
+              <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e8f5e9', padding: 6, borderRadius: 8, alignSelf: 'flex-start' }}>
+                <Ionicons name="gift-outline" size={16} color="#2e7d32" />
+                <Text style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: 12 }}>Global Free Access Active</Text>
+              </View>
+            ) : isPending ? (
+              <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fff9c4', padding: 6, borderRadius: 8, alignSelf: 'flex-start' }}>
+                <Ionicons name="time-outline" size={16} color="#f57f17" />
+                <Text style={{ color: '#f57f17', fontWeight: 'bold', fontSize: 12 }}>Payment Pending Review</Text>
+              </View>
+            ) : (hasPaidAccess && paidEndTime) ? (
+              <View style={{ marginTop: 6 }}>
+                <CountdownTimer
+                  targetDate={paidEndTime}
+                  label="Subscription Ends In:"
+                  onExpire={() => {
+                    console.log('Subscription Expired in UI');
+                    fetchDashboardData();
+                  }}
+                />
+              </View>
+            ) : trialStartStr ? (() => {
               const trialStart = new Date(trialStartStr).getTime();
-              const TRIAL_DURATION_MS = 15 * 60 * 1000; // 15 Minutes
+              const TRIAL_DURATION_MS = 15 * 60 * 1000;
               const trialEnd = trialStart + TRIAL_DURATION_MS;
               const now = new Date().getTime();
-              const isTrialActive = now < trialEnd;
 
-              if (isTrialActive) {
+              if (now < trialEnd) {
                 return (
                   <View style={{ marginTop: 6 }}>
                     <CountdownTimer
                       targetDate={new Date(trialEnd).toISOString()}
                       label="Free Trial Ends In:"
-                      onExpire={() => {
-                        console.log('Trial Expired in UI');
-                        fetchDashboardData();
-                      }}
+                      onExpire={() => fetchDashboardData()}
                     />
                   </View>
                 );
@@ -414,142 +441,141 @@ export default function HomeScreen() {
                   </View>
                 );
               }
-            }
+            })() : null}
+          </View>
 
-            // 4. Default / expired state fallback (Optional)
-            return null;
-          })()}
-
+          <View style={styles.actions}>
+            <NotificationIcon />
+            <TouchableOpacity
+              onPress={() => showAlert({
+                title: "Logout",
+                message: "Are you sure you want to log out?",
+                type: 'confirm',
+                confirmText: "Logout",
+                cancelText: "Cancel",
+                onConfirm: signOut
+              })}
+              style={styles.logoutIcon}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#e74c3c" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.actions}>
-          <NotificationIcon />
+
+        {/* Banner Carousel */}
+        {
+          banners.length > 0 && (
+            <View>
+              <FlatList
+                ref={flatListRef}
+                horizontal
+                data={banners}
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                scrollEnabled
+                snapToAlignment="center"
+                scrollEventThrottle={16}
+                decelerationRate="fast"
+                contentContainerStyle={{ marginVertical: 10 }}
+                onScrollToIndexFailed={info => {
+                  const wait = new Promise(resolve => setTimeout(resolve, 500));
+                  wait.then(() => {
+                    flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+                  });
+                }}
+                renderItem={({ item }) => {
+                  // Mapped from Website API Inspection:
+                  // Title -> title
+                  // Desc -> description
+                  // Link -> targetUrl (or link)
+                  // CTA Text -> Not in API, Website defaults to "Learn More"
+
+                  const title = item.title || item.name || item.heading || item.caption;
+                  const desc = item.description || item.content || item.subtitle;
+                  const rawLink = item.targetUrl || item.link; // Correct API key is targetUrl
+
+                  // Helper to ensure URL has scheme
+                  const openLink = (url?: string) => {
+                    if (!url) return;
+                    // Prepend https:// if missing http/https
+                    const finalUrl = (url.startsWith('http://') || url.startsWith('https://'))
+                      ? url
+                      : `https://${url}`;
+
+                    Linking.openURL(finalUrl).catch(err => console.error("Couldn't load page", err));
+                  };
+
+                  // We use "Learn More" because the website does so. This is UI text, not mock data.
+                  const cta = item.ctaText || item.cta_text || item.button_text || 'Learn More';
+
+                  return (
+                    <View style={[styles.bannerContainer, { width: screenWidth - 32 }]}>
+                      <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+                      <View style={styles.bannerOverlay}>
+                        <View style={styles.bannerTextContainer}>
+                          {title && <Text style={styles.bannerTitle} numberOfLines={1}>{title}</Text>}
+                          {desc && <Text style={styles.bannerDesc} numberOfLines={2}>{desc}</Text>}
+                        </View>
+                        {rawLink && (
+                          <TouchableOpacity
+                            style={styles.bannerBtn}
+                            activeOpacity={0.8}
+                            onPress={() => openLink(rawLink)}
+                          >
+                            <Text style={styles.bannerBtnText}>{cta}</Text>
+                            <Ionicons name="arrow-forward" size={12} color="#fff" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  )
+                }}
+              />
+            </View>
+          )
+        }
+
+        {/* Filters Row (Dropdowns) */}
+        <View style={styles.filtersRow}>
+          {/* Class Level Dropdown */}
           <TouchableOpacity
-            onPress={() => showAlert({
-              title: "Logout",
-              message: "Are you sure you want to log out?",
-              type: 'confirm',
-              confirmText: "Logout",
-              cancelText: "Cancel",
-              onConfirm: signOut
-            })}
-            style={styles.logoutIcon}
+            style={styles.dropdownBtn}
+            onPress={() => setShowLevelModal(true)}
           >
-            <Ionicons name="log-out-outline" size={24} color="#e74c3c" />
+            <View>
+              <Text style={styles.dropdownLabel}>Class Level</Text>
+              <Text style={styles.dropdownValue}>{getSelectedLevelName()}</Text>
+            </View>
+            <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
+          </TouchableOpacity>
+
+          {/* Semester Dropdown */}
+          <TouchableOpacity
+            style={styles.dropdownBtn}
+            onPress={() => setShowSemModal(true)}
+          >
+            <View>
+              <Text style={styles.dropdownLabel}>Semester</Text>
+              <Text style={styles.dropdownValue}>{selectedSemester ? `Semester ${selectedSemester}` : 'Select Semester'}</Text>
+            </View>
+            <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Banner Carousel */}
-      {banners.length > 0 && (
-        <View>
-          <FlatList
-            ref={flatListRef}
-            horizontal
-            data={banners}
-            keyExtractor={(item) => item.id.toString()}
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            scrollEnabled
-            snapToAlignment="center"
-            scrollEventThrottle={16}
-            decelerationRate="fast"
-            contentContainerStyle={{ marginVertical: 10 }}
-            onScrollToIndexFailed={info => {
-              const wait = new Promise(resolve => setTimeout(resolve, 500));
-              wait.then(() => {
-                flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
-              });
-            }}
-            renderItem={({ item }) => {
-              // Mapped from Website API Inspection:
-              // Title -> title
-              // Desc -> description
-              // Link -> targetUrl (or link)
-              // CTA Text -> Not in API, Website defaults to "Learn More"
+        {/* Banner (Placeholder for now) */}
+        {/* <View style={styles.banner}><Text style={styles.bannerText}>News & Updates</Text></View> */}
 
-              const title = item.title || item.name || item.heading || item.caption;
-              const desc = item.description || item.content || item.subtitle;
-              const rawLink = item.targetUrl || item.link; // Correct API key is targetUrl
-
-              // Helper to ensure URL has scheme
-              const openLink = (url?: string) => {
-                if (!url) return;
-                // Prepend https:// if missing http/https
-                const finalUrl = (url.startsWith('http://') || url.startsWith('https://'))
-                  ? url
-                  : `https://${url}`;
-
-                Linking.openURL(finalUrl).catch(err => console.error("Couldn't load page", err));
-              };
-
-              // We use "Learn More" because the website does so. This is UI text, not mock data.
-              const cta = item.ctaText || item.cta_text || item.button_text || 'Learn More';
-
-              return (
-                <View style={[styles.bannerContainer, { width: screenWidth - 32 }]}>
-                  <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
-                  <View style={styles.bannerOverlay}>
-                    <View style={styles.bannerTextContainer}>
-                      {title && <Text style={styles.bannerTitle} numberOfLines={1}>{title}</Text>}
-                      {desc && <Text style={styles.bannerDesc} numberOfLines={2}>{desc}</Text>}
-                    </View>
-                    {rawLink && (
-                      <TouchableOpacity
-                        style={styles.bannerBtn}
-                        activeOpacity={0.8}
-                        onPress={() => openLink(rawLink)}
-                      >
-                        <Text style={styles.bannerBtnText}>{cta}</Text>
-                        <Ionicons name="arrow-forward" size={12} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              )
-            }}
-          />
+        <View style={styles.sectionHeader}>
+          {/* Fallback text if user hasn't selected anything or loading */}
+          <Text style={styles.sectionTitle}>
+            {selectedLevelId ? 'My Subjects' : 'Select a Class'}
+          </Text>
+          <Text style={styles.badge}>{filteredSubjects.length} found</Text>
         </View>
-      )}
-
-      {/* Filters Row (Dropdowns) */}
-      <View style={styles.filtersRow}>
-        {/* Class Level Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdownBtn}
-          onPress={() => setShowLevelModal(true)}
-        >
-          <View>
-            <Text style={styles.dropdownLabel}>Class Level</Text>
-            <Text style={styles.dropdownValue}>{getSelectedLevelName()}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
-        </TouchableOpacity>
-
-        {/* Semester Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdownBtn}
-          onPress={() => setShowSemModal(true)}
-        >
-          <View>
-            <Text style={styles.dropdownLabel}>Semester</Text>
-            <Text style={styles.dropdownValue}>{selectedSemester ? `Semester ${selectedSemester}` : 'Select Semester'}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
-        </TouchableOpacity>
       </View>
-
-      {/* Banner (Placeholder for now) */}
-      {/* <View style={styles.banner}><Text style={styles.bannerText}>News & Updates</Text></View> */}
-
-      <View style={styles.sectionHeader}>
-        {/* Fallback text if user hasn't selected anything or loading */}
-        <Text style={styles.sectionTitle}>
-          {selectedLevelId ? 'My Subjects' : 'Select a Class'}
-        </Text>
-        <Text style={styles.badge}>{filteredSubjects.length} found</Text>
-      </View>
-    </View>
-  );
+    );
+  }, [userInfo, banners, selectedLevelId, selectedSemester, classLevels, screenWidth, showAlert, signOut, getSelectedLevelName, fetchDashboardData, filteredSubjects.length, styles]);
 
   const renderModals = () => (
     <>
@@ -617,13 +643,59 @@ export default function HomeScreen() {
       <FlatList
         data={filteredSubjects}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => (
-          <SubjectCard
-            subject={item}
-            index={index}
-            onPress={(s) => router.push({ pathname: "/subject/[id]", params: { id: s.id, name: s.name } })}
-          />
-        )}
+        renderItem={({ item, index }) => {
+          // Robust access check
+          const isTrue = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
+          const isGlobalFree = isTrue(userInfo?.isGlobalFreeAccessEnabled) || isTrue(userInfo?.is_global_free_access_enabled);
+          const hasPaidAccess = isTrue(userInfo?.hasMaterialAccess) || isTrue(userInfo?.has_material_access);
+          const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
+          const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+
+          let isLocked = !isGlobalFree;
+          if (isLocked && hasPaidAccess && paidEndTime) {
+            isLocked = new Date().getTime() >= new Date(paidEndTime).getTime();
+          }
+          if (isLocked && trialStartStr) {
+            const trialEnd = new Date(trialStartStr).getTime() + (15 * 60 * 1000);
+            isLocked = new Date().getTime() >= trialEnd;
+          }
+
+          // isPending is now component-scoped
+
+          const handlePress = (s: any) => {
+            if (isPending) {
+              showAlert({
+                title: 'Review in Progress',
+                message: 'Your payment proof has been submitted and is currently being reviewed by the admin. Please wait for approval.',
+                type: 'info'
+              });
+              return;
+            }
+
+            if (isLocked) {
+              showAlert({
+                title: 'Upgrade Required',
+                message: 'Unlock full access to view notes and videos for this subject. Pay now with PesaPal or upload proof.',
+                type: 'confirm',
+                confirmText: 'Pay Now',
+                cancelText: 'Cancel',
+                onConfirm: () => setShowPaymentModal(true)
+              });
+              return;
+            }
+            router.push({ pathname: "/subject/[id]", params: { id: s.id, name: s.name } });
+          };
+
+          return (
+            <SubjectCard
+              subject={item}
+              index={index}
+              isLocked={isLocked}
+              status={isPending ? 'pending' : (isLocked ? 'locked' : 'unlocked')}
+              onPress={handlePress}
+            />
+          );
+        }}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -650,6 +722,25 @@ export default function HomeScreen() {
         }
       />
       {renderModals()}
+
+      {userInfo && (
+        <PaymentModal
+          visible={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          userId={userInfo.id ? userInfo.id.toString() : (userInfo.userId ? userInfo.userId.toString() : '')}
+          userName={userInfo.full_name || userInfo.name || userInfo.username || ''}
+          userEmail={userInfo.email || ''}
+          isPending={isPending}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            // Optimistically update userInfo to show pending state immediately
+            if (userInfo) {
+              updateUser({ ...userInfo, materialAccessStatus: 'pending', material_access_status: 'pending' });
+            }
+            onRefresh();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

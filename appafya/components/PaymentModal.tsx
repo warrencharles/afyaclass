@@ -2,7 +2,7 @@ import api from '@/constants/api';
 import { useAlert } from '@/context/AlertContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -25,9 +25,10 @@ interface PaymentModalProps {
     userName: string;
     userEmail: string;
     onSuccess?: () => void;
+    isPending?: boolean;
 }
 
-export default function PaymentModal({ visible, onClose, userId, userName, userEmail, onSuccess }: PaymentModalProps) {
+export default function PaymentModal({ visible, onClose, userId, userName, userEmail, onSuccess, isPending }: PaymentModalProps) {
     const { showAlert } = useAlert();
     const [step, setStep] = useState<'plan' | 'payment'>('plan');
     const [loading, setLoading] = useState(false);
@@ -75,6 +76,10 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
         setLoading(true);
         try {
             const amount = selectedPlan === 'weekly_material_access' ? 1000 : 4000;
+
+            // First check if already pending via props or local logic if needed
+            // But we primarily rely on the caller blocking the modal. 
+            // However, a second check here is good for safety.
 
             if (paymentMode === 'pesapal') {
                 const payload = {
@@ -183,7 +188,14 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
         >
             <View style={styles.headerContainer}>
                 <Text style={styles.headerTitle}>Unlock Full Access</Text>
-                <Text style={styles.subHeader}>Choose a plan to continue learning.</Text>
+                {isPending ? (
+                    <View style={styles.pendingWarning}>
+                        <Ionicons name="time" size={20} color="#f57f17" />
+                        <Text style={styles.pendingWarningText}>Review in Progress: Your previous proof is being verified.</Text>
+                    </View>
+                ) : (
+                    <Text style={styles.subHeader}>Choose a plan to continue learning.</Text>
+                )}
             </View>
 
             <View style={styles.planContainer}>
@@ -508,5 +520,22 @@ const styles = StyleSheet.create({
     },
     manualSubmitBtn: {
         backgroundColor: '#3498db',
+    },
+    pendingWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff9c4',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 20,
+        gap: 8,
+        borderWidth: 1,
+        borderColor: '#fbc02d',
+    },
+    pendingWarningText: {
+        color: '#f57f17',
+        fontSize: 13,
+        fontWeight: 'bold',
+        flex: 1,
     }
 });

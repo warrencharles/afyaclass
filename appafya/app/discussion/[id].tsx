@@ -1,7 +1,7 @@
 import api from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -153,6 +153,7 @@ export default function DiscussionDetailScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f9f9f9' },
     navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
     backBtn: { padding: 4 },
     navTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' },
 
