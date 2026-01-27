@@ -265,11 +265,21 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
             )}
 
             <View style={styles.footer}>
-                <TouchableOpacity style={[styles.payButton, paymentMode === 'manual' && styles.manualSubmitBtn]} onPress={handleInitiatePayment} disabled={loading}>
+                <TouchableOpacity
+                    style={[
+                        styles.payButton,
+                        (paymentMode === 'manual' && !isPending) && styles.manualSubmitBtn,
+                        isPending && { backgroundColor: '#bdc3c7' }
+                    ]}
+                    onPress={handleInitiatePayment}
+                    disabled={loading || isPending}
+                >
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.payButtonText}>{paymentMode === 'pesapal' ? 'Pay Now' : 'Submit Proof'}</Text>
+                        <Text style={styles.payButtonText}>
+                            {isPending ? 'Review in Progress' : (paymentMode === 'pesapal' ? 'Pay Now' : 'Submit Proof')}
+                        </Text>
                     )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={handleClose} disabled={loading}>
@@ -278,8 +288,8 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
             </View>
 
             <View style={styles.secureBadge}>
-                <Ionicons name="lock-closed" size={12} color="#95a5a6" />
-                <Text style={styles.secureText}>{paymentMode === 'pesapal' ? 'Secured by Pesapal' : 'Review by Admin'}</Text>
+                <Ionicons name="lock-closed" size={14} color="#7f8c8d" />
+                <Text style={styles.secureText}>{paymentMode === 'pesapal' ? 'Secured by Pesapal' : 'REVIEW BY SUPPORT'}</Text>
             </View>
         </ScrollView>
     );
@@ -330,7 +340,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 24,
         paddingTop: 40,
-        paddingBottom: 40, // Add bottom padding for scrolling
+        paddingBottom: 100, // Even more padding for home indicators
     },
     headerContainer: {
         marginBottom: 8,
@@ -428,12 +438,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        marginTop: 20,
+        gap: 8,
+        marginTop: 30,
+        marginBottom: 20, // Extra margin at bottom of content
     },
     secureText: {
-        fontSize: 12,
-        color: '#95a5a6',
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#7f8c8d',
+        letterSpacing: 0.5,
     },
     // WebView Styles
     webViewHeader: {

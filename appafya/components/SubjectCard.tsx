@@ -24,8 +24,8 @@ export default function SubjectCard({ subject, onPress, index, isLocked, status 
             style={[
                 styles.container,
                 { backgroundColor: bgColor, borderLeftColor: accentColor },
-                isLocked && { opacity: 0.8 },
-                status === 'pending' && { borderLeftColor: '#fbc02d' }
+                (isLocked && status !== 'pending') && { opacity: 0.8 },
+                status === 'pending' && { borderLeftColor: '#fbc02d', elevation: 4 }
             ]}
             onPress={() => onPress(subject)}
             activeOpacity={(isLocked && status !== 'pending') ? 1 : 0.7}
@@ -54,7 +54,7 @@ export default function SubjectCard({ subject, onPress, index, isLocked, status 
                         <Text
                             style={[
                                 styles.footerText,
-                                isLocked && { color: '#d32f2f', fontWeight: 'bold' },
+                                (isLocked && status !== 'pending') && { color: '#d32f2f', fontWeight: 'bold' },
                                 status === 'pending' && { color: '#f57f17' }
                             ]}
                             numberOfLines={1}

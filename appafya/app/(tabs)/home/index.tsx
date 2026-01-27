@@ -19,6 +19,8 @@ export default function HomeScreen() {
   const { signOut, user: contextUser, updateUser } = useAuth();
   const { showAlert } = useAlert();
   const [userInfo, setUserInfo] = useState<User | null>(contextUser);
+  const [localPending, setLocalPending] = useState(false);
+  const pendingTimestamp = React.useRef<number>(0);
   const router = useRouter();
 
   // Data State
@@ -28,8 +30,25 @@ export default function HomeScreen() {
   // Filters State
   const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>('1');
-  const isPending = (userInfo?.materialAccessStatus?.toLowerCase() === 'pending' ||
-    userInfo?.material_access_status?.toLowerCase() === 'pending');
+
+  // Robust Access Helpers
+  const isTrue = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
+  const isGlobalFree = isTrue(userInfo?.isGlobalFreeAccessEnabled) || isTrue(userInfo?.is_global_free_access_enabled);
+  const hasPaidAccess = isTrue(userInfo?.hasMaterialAccess) || isTrue(userInfo?.has_material_access);
+  const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
+
+  // Calculate if payment is actually valid (not expired)
+  const isPaidActive = hasPaidAccess && paidEndTime && (new Date().getTime() < new Date(paidEndTime).getTime());
+  const hasAccess = isGlobalFree || isPaidActive;
+  const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+
+  const isPending = (localPending || (
+    userInfo?.materialAccessStatus?.toLowerCase() === 'pending' ||
+    userInfo?.material_access_status?.toLowerCase() === 'pending' ||
+    userInfo?.materialAccessStatus?.toLowerCase() === 'review' ||
+    userInfo?.material_access_status?.toLowerCase() === 'review'
+  )) && !hasAccess; // Access OVERRIDES Pending status
+
   const [banners, setBanners] = useState<any[]>([]);
   const [filteredSubjects, setFilteredSubjects] = useState<Subject[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -38,6 +57,22 @@ export default function HomeScreen() {
   const flatListRef = React.useRef<FlatList>(null);
   const scrollIndex = React.useRef(0);
   const screenWidth = Dimensions.get('window').width;
+
+  // Load persistence on mount
+  useEffect(() => {
+    const loadPersistence = async () => {
+      try {
+        const val = await SecureStore.getItemAsync('pending_proof_submitted');
+        const time = await SecureStore.getItemAsync('pending_proof_at');
+        if (val === 'true') {
+          console.log('[Persistence] Hard Pending active from:', time);
+          setLocalPending(true);
+          pendingTimestamp.current = time ? parseInt(time) : 0;
+        }
+      } catch (e) { }
+    };
+    loadPersistence();
+  }, []);
 
   useEffect(() => {
     let interval: any;
@@ -57,6 +92,12 @@ export default function HomeScreen() {
   const prevIsGlobalFreeAccess = React.useRef<boolean | undefined>(
     userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled
   );
+  const userInfoRef = React.useRef(userInfo);
+
+  // Sync Ref with userInfo
+  useEffect(() => {
+    userInfoRef.current = userInfo;
+  }, [userInfo]);
 
   // Sync State with contextUser
   useEffect(() => {
@@ -71,7 +112,8 @@ export default function HomeScreen() {
 
     const pollUser = async () => {
       try {
-        const id = userInfo?.id || userInfo?.userId;
+        const currentUser = userInfoRef.current;
+        const id = currentUser?.id || currentUser?.userId;
         if (!id) return;
 
         // Silent fetch
@@ -106,10 +148,41 @@ export default function HomeScreen() {
             ToastAndroid.show(msg, ToastAndroid.LONG);
           }
         }
+        // --- ABSOLUTE GUARD EXPIRATION ---
+        const serverStatus = (freshData.materialAccessStatus || freshData.material_access_status || '').toLowerCase();
+        const now = Date.now();
+        const guardAge = now - pendingTimestamp.current;
+        const isGuardExhausted = guardAge > 10000; // 10 seconds absolute window
 
-        // 3. Update State & Persist via AuthContext
-        const updated = { ...userInfo, ...freshData };
+        // 1. If guard is exhausted OR server has acknowledged, kill the local lock
+        const serverIsWorking = serverStatus === 'pending' || serverStatus === 'review' || serverStatus === 'approved';
+
+        if (localPending && (isGuardExhausted || serverIsWorking)) {
+          console.log(`[Poll] Guard ${isGuardExhausted ? 'EXPIRED' : 'SYNCED'}. Server status: ${serverStatus || 'none'}`);
+          setLocalPending(false);
+          await SecureStore.deleteItemAsync('pending_proof_submitted');
+          await SecureStore.deleteItemAsync('pending_proof_at');
+          // Important: localPending will be false in the NEXT poll, but we use server truth for THIS poll
+        }
+
+        // 2. Data Enrichment: Only force pending if localPending is STILL active
+        // (This means we are within the 10s window and server hasn't seen it yet)
+        const updated = { ...userInfoRef.current, ...freshData };
+        if (localPending && !serverIsWorking && !isGuardExhausted) {
+          console.log('[Poll] Guarding: forcing PENDING (10s window)');
+          updated.materialAccessStatus = 'pending' as any;
+          updated.material_access_status = 'pending' as any;
+        } else {
+          // Guard is over: server is absolute truth. 
+          // If server says nothing, ensure status is 'none' to clear stale 'pending'
+          if (!serverIsWorking) {
+            updated.materialAccessStatus = (freshData.materialAccessStatus || 'none') as any;
+            updated.material_access_status = (freshData.material_access_status || 'none') as any;
+          }
+        }
+
         await updateUser(updated);
+        setUserInfo(updated);
 
         return updated;
 
@@ -203,10 +276,33 @@ export default function HomeScreen() {
         freshUserData.is_global_free_access_enabled = isGlobal;
         // -----------------------------------------------------------------------------
 
-        // Merge with existing session token if needed, or just update userInfo
-        const updatedUser = { ...storedUser, ...freshUserData };
+        const serverStatus = (freshUserData.materialAccessStatus || freshUserData.material_access_status || '').toLowerCase();
+
+        // --- ABSOLUTE GUARD EXPIRATION ---
+        const now = Date.now();
+        const guardAge = now - pendingTimestamp.current;
+        const isGuardExhausted = guardAge > 10000;
+        const serverIsWorking = serverStatus === 'pending' || serverStatus === 'review' || serverStatus === 'approved';
+
+        if (localPending && (isGuardExhausted || serverIsWorking)) {
+          console.log('[Dashboard] Guard cleared. Server in control.');
+          setLocalPending(false);
+          await SecureStore.deleteItemAsync('pending_proof_submitted');
+          await SecureStore.deleteItemAsync('pending_proof_at');
+        }
+
+        const updatedUser = { ...userInfo, ...freshUserData };
+        if (localPending && !serverIsWorking && !isGuardExhausted) {
+          console.log('[Dashboard] Guarding: forcing PENDING');
+          updatedUser.materialAccessStatus = 'pending' as any;
+          updatedUser.material_access_status = 'pending' as any;
+        } else if (!serverIsWorking) {
+          updatedUser.materialAccessStatus = (freshUserData.materialAccessStatus || 'none') as any;
+          updatedUser.material_access_status = (freshUserData.material_access_status || 'none') as any;
+        }
 
         await updateUser(updatedUser);
+        setUserInfo(updatedUser);
         storedUser = updatedUser; // Update local ref for further logic
       } else {
         console.warn('[Dashboard] Failed to refresh user profile:', userProfileRes.reason);
@@ -368,7 +464,13 @@ export default function HomeScreen() {
     setFilteredSubjects(results);
   }, [selectedLevelId, selectedSemester, allSubjects]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
+    console.log('[Refresh] Manual refresh: Clearing local guards for instant sync');
+    setLocalPending(false);
+    pendingTimestamp.current = 0;
+    await SecureStore.deleteItemAsync('pending_proof_submitted');
+    await SecureStore.deleteItemAsync('pending_proof_at');
+
     setRefreshing(true);
     fetchDashboardData();
   };
@@ -379,13 +481,7 @@ export default function HomeScreen() {
 
   // Stabilize renderHeader to prevent NotificationIcon modal from closing on re-renders
   const renderHeader = useCallback(() => {
-    // Helper for robust boolean check
-    const isTrue = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
-    const isGlobalFree = isTrue(userInfo?.isGlobalFreeAccessEnabled) || isTrue(userInfo?.is_global_free_access_enabled);
-    const hasPaidAccess = isTrue(userInfo?.hasMaterialAccess) || isTrue(userInfo?.has_material_access);
-    const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
-    const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
-    // isPending is now component-scoped
+    // isPending and access variables are now in the outer component scope
 
     return (
       <View style={styles.header}>
@@ -442,6 +538,8 @@ export default function HomeScreen() {
                 );
               }
             })() : null}
+
+            {/* DEBUG TAG HIDDEN IN BACKGROUND AS REQUESTED */}
           </View>
 
           <View style={styles.actions}>
@@ -575,7 +673,7 @@ export default function HomeScreen() {
         </View>
       </View>
     );
-  }, [userInfo, banners, selectedLevelId, selectedSemester, classLevels, screenWidth, showAlert, signOut, getSelectedLevelName, fetchDashboardData, filteredSubjects.length, styles]);
+  }, [userInfo, banners, selectedLevelId, selectedSemester, classLevels, screenWidth, showAlert, signOut, getSelectedLevelName, fetchDashboardData, filteredSubjects.length, styles, isPending]);
 
   const renderModals = () => (
     <>
@@ -642,25 +740,20 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" />
       <FlatList
         data={filteredSubjects}
+        extraData={`${JSON.stringify(userInfo)}-${localPending}`}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item, index }) => {
-          // Robust access check
-          const isTrue = (val: any) => (val === true || val === 1 || val === "1" || val === "true");
-          const isGlobalFree = isTrue(userInfo?.isGlobalFreeAccessEnabled) || isTrue(userInfo?.is_global_free_access_enabled);
-          const hasPaidAccess = isTrue(userInfo?.hasMaterialAccess) || isTrue(userInfo?.has_material_access);
-          const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
-          const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
-
           let isLocked = !isGlobalFree;
-          if (isLocked && hasPaidAccess && paidEndTime) {
-            isLocked = new Date().getTime() >= new Date(paidEndTime).getTime();
+          if (isLocked && isPaidActive) {
+            isLocked = false; // Overridden by active payment
           }
+
           if (isLocked && trialStartStr) {
             const trialEnd = new Date(trialStartStr).getTime() + (15 * 60 * 1000);
             isLocked = new Date().getTime() >= trialEnd;
           }
 
-          // isPending is now component-scoped
+          const status = isPending ? 'pending' : (isLocked ? 'locked' : 'unlocked');
 
           const handlePress = (s: any) => {
             if (isPending) {
@@ -731,13 +824,24 @@ export default function HomeScreen() {
           userName={userInfo.full_name || userInfo.name || userInfo.username || ''}
           userEmail={userInfo.email || ''}
           isPending={isPending}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowPaymentModal(false);
-            // Optimistically update userInfo to show pending state immediately
+            const now = Date.now();
+            setLocalPending(true);
+            pendingTimestamp.current = now;
+            await SecureStore.setItemAsync('pending_proof_submitted', 'true');
+            await SecureStore.setItemAsync('pending_proof_at', now.toString());
+
             if (userInfo) {
-              updateUser({ ...userInfo, materialAccessStatus: 'pending', material_access_status: 'pending' });
+              const updated = {
+                ...userInfo,
+                materialAccessStatus: 'pending' as any,
+                material_access_status: 'pending' as any
+              };
+              await updateUser(updated);
+              setUserInfo(updated);
             }
-            onRefresh();
+            setTimeout(onRefresh, 5000);
           }}
         />
       )}
