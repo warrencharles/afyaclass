@@ -12,6 +12,19 @@ export interface User {
     createdAt?: string; // ISO date string
     created_at?: string;
     date_joined?: string;
+
+    // Access Flags
+    hasMaterialAccess?: boolean;
+    materialPaidAccessEndTime?: string;
+    materialTrialEndTime?: string;
+    materialTrialStartTime?: string;
+    isGlobalFreeAccessEnabled?: boolean;
+    is_global_free_access_enabled?: boolean; // Backend variant
+
+    // Snake case variations often returned by Laravel
+    material_paid_access_end_time?: string;
+    material_trial_end_time?: string;
+    material_trial_start_time?: string;
 }
 
 export interface ClassLevel {

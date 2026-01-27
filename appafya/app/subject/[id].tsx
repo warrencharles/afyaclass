@@ -114,16 +114,57 @@ export default function SubjectDetailScreen() {
         }
     };
 
-    const openMaterial = (material: Material) => {
-        // Robust check for locking
+    const checkAccess = (material: Material) => {
+        // Standardize properties (Handle snake_case from backend)
+        const isGlobalFree = userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled;
+
+        // Paid Access: Check Boolean OR Time Validity
+        const paidEndTimeStr = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
+        const hasPaidFlag = userInfo?.hasMaterialAccess || userInfo?.has_material_access;
+
+        let isPaidActive = false;
+        if (paidEndTimeStr) {
+            const end = new Date(paidEndTimeStr).getTime();
+            if (end > new Date().getTime()) isPaidActive = true;
+        }
+        if (hasPaidFlag) isPaidActive = true;
+
+        const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+
+        // 0. Global Free Access Override (Highest Priority)
+        // If Global Free Access is ON, ignore everything else.
+        if (isGlobalFree) return true;
+
+        // 1. Check if material considers itself locked
         // API might return isLocked as boolean, number (0/1), or string ("0"/"1")
         const lockedFlag = material.isLocked == true || String(material.isLocked) === '1' || String(material.isLocked) === 'true';
-
-        // Check access status explicitly if provided
         const statusLocked = material.accessStatus === 'locked' || material.accessStatus === 'premium' || material.accessStatus === 'paid';
+        const isMaterialRestricted = lockedFlag || statusLocked;
 
-        if (lockedFlag || statusLocked) {
-            // alert('This content is locked. Please upgrade your subscription.');
+        // If material is NOT restricted at all, everyone can access
+        if (!isMaterialRestricted) return true;
+
+        // 2. Paid Access (Medium Priority)
+        // If user has paid access, they can view restricted content
+        if (isPaidActive) return true;
+
+        // 3. Trial Access (Lowest Priority)
+        if (trialStartStr) {
+            const trialStart = new Date(trialStartStr).getTime();
+            const TRIAL_DURATION_MS = 15 * 60 * 1000;
+            const now = new Date().getTime();
+            // Active trial allows access to restricted content
+            if (now < trialStart + TRIAL_DURATION_MS) return true;
+        }
+
+        // 4. Fallback: Access Denied
+        return false;
+    };
+
+    const openMaterial = (material: Material) => {
+        const canAccess = checkAccess(material);
+
+        if (!canAccess) {
             setShowPaymentModal(true);
             return;
         }
@@ -140,8 +181,6 @@ export default function SubjectDetailScreen() {
         }
 
         if (url) {
-            // Navigate to internal viewer logic
-            // We pass the URL and type to handle specific rendering (like Android PDFs)
             router.push({
                 pathname: "/viewer",
                 params: {
@@ -214,9 +253,8 @@ export default function SubjectDetailScreen() {
                     </View>
                 }
                 renderItem={({ item }) => {
-                    const lockedFlag = item.isLocked == true || String(item.isLocked) === '1' || String(item.isLocked) === 'true';
-                    const statusLocked = item.accessStatus === 'locked' || item.accessStatus === 'premium' || item.accessStatus === 'paid';
-                    const isLocked = lockedFlag || statusLocked;
+                    const hasAccess = checkAccess(item);
+                    const isLocked = !hasAccess;
 
                     return (
                         <TouchableOpacity

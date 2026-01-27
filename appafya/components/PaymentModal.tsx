@@ -9,6 +9,7 @@ import {
     Modal,
     Platform,
     SafeAreaView,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -175,9 +176,15 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
     };
 
     const renderPlanSelection = () => (
-        <View style={styles.content}>
-            <Text style={styles.headerTitle}>Unlock Full Access</Text>
-            <Text style={styles.subHeader}>Choose a plan to continue learning.</Text>
+        <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={styles.headerContainer}>
+                <Text style={styles.headerTitle}>Unlock Full Access</Text>
+                <Text style={styles.subHeader}>Choose a plan to continue learning.</Text>
+            </View>
 
             <View style={styles.planContainer}>
                 <TouchableOpacity
@@ -262,7 +269,7 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
                 <Ionicons name="lock-closed" size={12} color="#95a5a6" />
                 <Text style={styles.secureText}>{paymentMode === 'pesapal' ? 'Secured by Pesapal' : 'Review by Admin'}</Text>
             </View>
-        </View>
+        </ScrollView>
     );
 
     return (
@@ -308,10 +315,13 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
 }
 
 const styles = StyleSheet.create({
-    content: {
-        flex: 1,
+    scrollContent: {
         padding: 24,
         paddingTop: 40,
+        paddingBottom: 40, // Add bottom padding for scrolling
+    },
+    headerContainer: {
+        marginBottom: 8,
     },
     headerTitle: {
         fontSize: 24,
@@ -379,7 +389,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     footer: {
-        marginTop: 'auto',
+        marginTop: 20,
         gap: 12,
     },
     payButton: {

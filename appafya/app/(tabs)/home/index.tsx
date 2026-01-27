@@ -1,4 +1,5 @@
 import AppModal from '@/components/AppModal';
+import CountdownTimer from '@/components/CountdownTimer';
 import NotificationIcon from '@/components/NotificationIcon';
 import SubjectCard from '@/components/SubjectCard';
 import api from '@/constants/api';
@@ -48,6 +49,77 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [banners]);
 
+  // --- Real-time Polling for Global Access ---
+  const prevIsGlobalFreeAccess = React.useRef<boolean | undefined>(
+    userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled
+  );
+
+  // Sync Ref with State
+  useEffect(() => {
+    if (userInfo) {
+      prevIsGlobalFreeAccess.current = userInfo.isGlobalFreeAccessEnabled || userInfo.is_global_free_access_enabled;
+    }
+  }, [userInfo]);
+
+  useEffect(() => {
+    let interval: any;
+
+    const pollUser = async () => {
+      try {
+        const id = userInfo?.id || userInfo?.userId;
+        if (!id) return;
+
+        // Silent fetch
+        const res = await api.get(`/users/${id}`);
+        const freshData = res.data;
+
+        if (!freshData) return;
+
+        // 1. Detect Change in Global Access
+        const isGlobal = freshData.isGlobalFreeAccessEnabled || freshData.is_global_free_access_enabled;
+        const wasGlobal = prevIsGlobalFreeAccess.current;
+
+        if (wasGlobal !== undefined && isGlobal !== wasGlobal) {
+          const msg = isGlobal 
+            ? 'Global Free Access has been enabled by the admin!'
+            : 'Global Free Access has ended.';
+          
+          console.log('[Polling]', msg);
+          if (Platform.OS === 'android') {
+            ToastAndroid.show(msg, ToastAndroid.LONG);
+          }
+        }
+
+        // 2. Update State Instantly
+        setUserInfo(prev => {
+          // Merge to ensure we don't lose other fields
+          const updated = { ...prev, ...freshData };
+          
+          // Persist to storage
+          if (Platform.OS !== 'web') {
+            SecureStore.setItemAsync('userInfo', JSON.stringify(updated));
+          } else if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('userInfo', JSON.stringify(updated));
+          }
+          
+          return updated;
+        });
+
+      } catch (err) {
+        // Silent fail on polling errors
+        // console.log('[Polling] Error:', err);
+      }
+    };
+
+    if (userInfo) {
+      interval = setInterval(pollUser, 10000); // 10 Seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [userInfo?.id]); // Depend on ID to restart on user switch
+
   // UI State
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,11 +149,34 @@ export default function HomeScreen() {
 
       // 2. Fetch Data
       // Reverted class-levels to public endpoint based on analysis
-      const [levelsRes, subjectsRes, bannersRes] = await Promise.allSettled([ // Added bannersRes
+      const [levelsRes, subjectsRes, bannersRes, userProfileRes] = await Promise.allSettled([ // Added bannersRes
         api.get('/class-levels'),
         api.get('/subjects'), // Back to the list of subjects, handled by interceptor
-        api.get('/advertisements') // Fetch banners
+        api.get('/advertisements'), // Fetch banners
+        userId ? api.get(`/users/${userId}`) : Promise.reject('No User ID') // Refresh User Profile
       ]);
+
+      // --- NEW: Process User Profile Refresh (Fix for Revocation Persistence) ---
+      if (userProfileRes.status === 'fulfilled') {
+        const freshUserData = userProfileRes.value.data;
+        console.log('[Dashboard] User profile refreshed. Access:', freshUserData.hasMaterialAccess);
+
+        // Merge with existing session token if needed, or just update userInfo
+        // We assume freshUserData contains the fields we care about
+        // Maintain the token if it's not in the response (usually isn't in a profile fetch)
+        const updatedUser = { ...currentUser, ...freshUserData };
+
+        setUserInfo(updatedUser);
+        if (Platform.OS !== 'web') {
+          await SecureStore.setItemAsync('userInfo', JSON.stringify(updatedUser));
+        } else if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        }
+        currentUser = updatedUser; // Update local ref for further logic
+      } else {
+        console.warn('[Dashboard] Failed to refresh user profile:', userProfileRes.reason);
+      }
+      // ------------------------------------------------------------------------
 
       // 3. Process Levels & Subjects
       let levels: ClassLevel[] = [];
@@ -254,6 +349,77 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.greeting}>Habari,</Text>
           <Text style={styles.username}>{userInfo?.name || userInfo?.username || 'Student'}</Text>
+
+          {/* ACCESS STATUS INDICATORS */}
+          {(() => {
+            // Helper to get diverse property names (Handle both camelCase and snake_case)
+            const isGlobalFree = userInfo?.isGlobalFreeAccessEnabled || userInfo?.is_global_free_access_enabled;
+            const hasPaidAccess = userInfo?.hasMaterialAccess || userInfo?.has_material_access;
+            const paidEndTime = userInfo?.materialPaidAccessEndTime || userInfo?.material_paid_access_end_time;
+            const trialStartStr = userInfo?.materialTrialStartTime || userInfo?.material_trial_start_time;
+
+            // 1. GLOBAL FREE ACCESS (Highest Priority)
+            if (isGlobalFree) {
+              return (
+                <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e8f5e9', padding: 6, borderRadius: 8, alignSelf: 'flex-start' }}>
+                  <Ionicons name="gift-outline" size={16} color="#2e7d32" />
+                  <Text style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: 12 }}>Global Free Access Active</Text>
+                </View>
+              );
+            }
+
+            // 2. PAID ACCESS (Medium Priority)
+            // Show if user has access AND it's not a generic permanent unlock (requires end time to show timer)
+            if (hasPaidAccess && paidEndTime) {
+              return (
+                <View style={{ marginTop: 6 }}>
+                  <CountdownTimer
+                    targetDate={paidEndTime}
+                    label="Subscription Ends In:"
+                    onExpire={() => {
+                      console.log('Subscription Expired in UI');
+                      fetchDashboardData();
+                    }}
+                  />
+                </View>
+              );
+            }
+
+            // 3. TRIAL ACCESS (Lowest Priority)
+            if (trialStartStr) {
+              const trialStart = new Date(trialStartStr).getTime();
+              const TRIAL_DURATION_MS = 15 * 60 * 1000; // 15 Minutes
+              const trialEnd = trialStart + TRIAL_DURATION_MS;
+              const now = new Date().getTime();
+              const isTrialActive = now < trialEnd;
+
+              if (isTrialActive) {
+                return (
+                  <View style={{ marginTop: 6 }}>
+                    <CountdownTimer
+                      targetDate={new Date(trialEnd).toISOString()}
+                      label="Free Trial Ends In:"
+                      onExpire={() => {
+                        console.log('Trial Expired in UI');
+                        fetchDashboardData();
+                      }}
+                    />
+                  </View>
+                );
+              } else {
+                return (
+                  <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ffebee', padding: 6, borderRadius: 8, alignSelf: 'flex-start' }}>
+                    <Ionicons name="alert-circle" size={16} color="#c62828" />
+                    <Text style={{ color: '#c62828', fontWeight: 'bold', fontSize: 12 }}>Trial Expired</Text>
+                  </View>
+                );
+              }
+            }
+
+            // 4. Default / expired state fallback (Optional)
+            return null;
+          })()}
+
         </View>
         <View style={styles.actions}>
           <NotificationIcon />
@@ -504,7 +670,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   topRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20,
   },
   greeting: { fontSize: 13, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 0.5 },
   bannerContainer: {
