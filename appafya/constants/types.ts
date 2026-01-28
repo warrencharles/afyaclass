@@ -29,6 +29,12 @@ export interface User {
     material_trial_start_time?: string;
     materialAccessStatus?: 'pending' | 'approved' | 'none'; // New status field
     material_access_status?: 'pending' | 'approved' | 'none'; // Backend variant
+
+    // Education Center
+    schoolName?: string;
+    school_name?: string; // Backend variant
+    college?: string;
+    educationCenter?: string;
 }
 
 export interface ClassLevel {

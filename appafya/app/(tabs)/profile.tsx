@@ -78,7 +78,7 @@ export default function ProfileScreen() {
                     username: currentUser.username || '',
                     email: currentUser.email || '',
                     phone: currentUser.phone || '',
-                    educationCenter: currentUser.schoolName || '',
+                    educationCenter: currentUser.schoolName || currentUser.school_name || currentUser.college || currentUser.educationCenter || '',
                 });
             }
         } catch (e) {

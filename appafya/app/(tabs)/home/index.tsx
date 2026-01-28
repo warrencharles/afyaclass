@@ -15,12 +15,213 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Dimensions, FlatList, Image, Linking, Platform, RefreshControl, StatusBar, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  center: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 150, // Added to clear floating navigation
+  },
+  header: {
+    marginBottom: 10,
+  },
+  topRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20,
+  },
+  greeting: { fontSize: 13, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 0.5 },
+  username: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50', marginTop: 2 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  logoutButton: { padding: 8, backgroundColor: '#ffebee', borderRadius: 20 },
+
+  bannerContainer: {
+    width: Dimensions.get('window').width - 32, // Full width minus padding
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginRight: 0, // No margin right since we are centering/paging
+    backgroundColor: '#ddd',
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)', // Dark overlay for readability
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  bannerTextContainer: {
+    marginBottom: 10,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  bannerDesc: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.9,
+    fontWeight: '500',
+  },
+  bannerBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#3498db',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bannerBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
+  logoutIcon: { padding: 4 }, // Just icon for logout to save space
+
+  filtersRow: {
+    flexDirection: 'row', gap: 12, marginBottom: 24,
+  },
+  dropdownBtn: {
+    flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fff', padding: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: '#ecf0f1',
+    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1,
+  },
+  dropdownLabel: { fontSize: 10, color: '#bdc3c7', fontWeight: 'bold', textTransform: 'uppercase' },
+  dropdownValue: { fontSize: 14, color: '#34495e', fontWeight: '600', marginTop: 2 },
+
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
+  badge: { fontSize: 12, color: '#7f8c8d', backgroundColor: '#ecf0f1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+
+  emptyState: { alignItems: 'center', marginTop: 40 },
+  emptyText: { color: '#bdc3c7', fontSize: 16, fontWeight: '500' },
+
+  // Modals
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 20, maxHeight: 400 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f2f6',
+    minHeight: 50, // Ensure enough height for wrapped text
+  },
+  modalOptionActive: { backgroundColor: '#f0f9ff', paddingHorizontal: 10, borderRadius: 8, borderBottomWidth: 0 },
+  optionText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1, // Allow text to take available space
+    flexWrap: 'wrap', // Enable text wrapping
+    marginRight: 10, // Space before checkmark
+  },
+  optionTextActive: { color: '#3498db', fontWeight: '600' },
+  unifiedOverlay: {
+    position: 'absolute',
+    top: 0, // Will be positioned relative to FlatList
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 10,
+  },
+  overlayContent: {
+    alignItems: 'center',
+    maxWidth: 320,
+  },
+  overlayTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  overlayMessage: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  overlayButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  overlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 140,
+    justifyContent: 'center',
+  },
+  trialButton: {
+    backgroundColor: '#27ae60',
+  },
+  payButton: {
+    backgroundColor: '#3498db',
+  },
+  overlayButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#3498db',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  unlockButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
 export default function HomeScreen() {
   const { signOut, user: contextUser, updateUser } = useAuth();
   const { showAlert } = useAlert();
   const [userInfo, setUserInfo] = useState<User | null>(contextUser);
   const [localPending, setLocalPending] = useState(false);
+  const localPendingRef = React.useRef(false); // Atomic ref for immediate sync
   const pendingTimestamp = React.useRef<number>(0);
+
+  // Atomic state updater
+  const updateLocalPending = (val: boolean) => {
+    setLocalPending(val);
+    localPendingRef.current = val;
+  };
   const router = useRouter();
 
   // Data State
@@ -64,15 +265,26 @@ export default function HomeScreen() {
       try {
         const val = await SecureStore.getItemAsync('pending_proof_submitted');
         const time = await SecureStore.getItemAsync('pending_proof_at');
-        if (val === 'true') {
-          console.log('[Persistence] Hard Pending active from:', time);
-          setLocalPending(true);
+        const storedUserId = await SecureStore.getItemAsync('pending_proof_user_id');
+
+        // Only apply pending state if it belongs to the current user
+        const currentUserId = String(contextUser?.id || contextUser?.userId || '');
+
+        if (val === 'true' && storedUserId === currentUserId && currentUserId) {
+          console.log('[Persistence] Hard Pending active from:', time, 'for user:', currentUserId);
+          updateLocalPending(true);
           pendingTimestamp.current = time ? parseInt(time) : 0;
+        } else if (val === 'true' && storedUserId !== currentUserId) {
+          // Clear stale pending state from different user
+          console.log('[Persistence] Clearing stale pending state from user:', storedUserId);
+          await SecureStore.deleteItemAsync('pending_proof_submitted');
+          await SecureStore.deleteItemAsync('pending_proof_at');
+          await SecureStore.deleteItemAsync('pending_proof_user_id');
         }
       } catch (e) { }
     };
     loadPersistence();
-  }, []);
+  }, [contextUser?.id, contextUser?.userId]);
 
   useEffect(() => {
     let interval: any;
@@ -150,36 +362,43 @@ export default function HomeScreen() {
         }
         // --- ABSOLUTE GUARD EXPIRATION ---
         const serverStatus = (freshData.materialAccessStatus || freshData.material_access_status || '').toLowerCase();
-        const now = Date.now();
-        const guardAge = now - pendingTimestamp.current;
-        const isGuardExhausted = guardAge > 10000; // 10 seconds absolute window
-
-        // 1. If guard is exhausted OR server has acknowledged, kill the local lock
         const serverIsWorking = serverStatus === 'pending' || serverStatus === 'review' || serverStatus === 'approved';
 
-        if (localPending && (isGuardExhausted || serverIsWorking)) {
-          console.log(`[Poll] Guard ${isGuardExhausted ? 'EXPIRED' : 'SYNCED'}. Server status: ${serverStatus || 'none'}`);
-          setLocalPending(false);
+        // If server confirms pending/review/approved, clear local guard and trust server
+        if (localPendingRef.current && serverIsWorking) {
+          console.log(`[Poll] Server confirmed: ${serverStatus}. Clearing local guard.`);
+          updateLocalPending(false);
           await SecureStore.deleteItemAsync('pending_proof_submitted');
           await SecureStore.deleteItemAsync('pending_proof_at');
-          // Important: localPending will be false in the NEXT poll, but we use server truth for THIS poll
+          await SecureStore.deleteItemAsync('pending_proof_user_id');
         }
 
-        // 2. Data Enrichment: Only force pending if localPending is STILL active
-        // (This means we are within the 10s window and server hasn't seen it yet)
+        // Validate pending state belongs to current user
+        const storedPendingUserId = await SecureStore.getItemAsync('pending_proof_user_id');
+        const currentUserId = String(userInfoRef.current?.id || userInfoRef.current?.userId || '');
+        const isPendingForCurrentUser = localPendingRef.current && storedPendingUserId === currentUserId && currentUserId;
+
+        // Clear stale pending state if user ID doesn't match
+        if (localPendingRef.current && !isPendingForCurrentUser) {
+          console.log('[Poll] Clearing stale pending state - user mismatch');
+          updateLocalPending(false);
+          await SecureStore.deleteItemAsync('pending_proof_submitted');
+          await SecureStore.deleteItemAsync('pending_proof_at');
+          await SecureStore.deleteItemAsync('pending_proof_user_id');
+        }
+
+        // Data Enrichment: Only force pending if guard is active AND belongs to current user
         const updated = { ...userInfoRef.current, ...freshData };
-        if (localPending && !serverIsWorking && !isGuardExhausted) {
-          console.log('[Poll] Guarding: forcing PENDING (10s window)');
+        if (isPendingForCurrentUser && !serverIsWorking) {
+          console.log('[Poll] Local guard active for current user: forcing PENDING');
           updated.materialAccessStatus = 'pending' as any;
           updated.material_access_status = 'pending' as any;
-        } else {
-          // Guard is over: server is absolute truth. 
-          // If server says nothing, ensure status is 'none' to clear stale 'pending'
-          if (!serverIsWorking) {
-            updated.materialAccessStatus = (freshData.materialAccessStatus || 'none') as any;
-            updated.material_access_status = (freshData.material_access_status || 'none') as any;
-          }
+        } else if (!serverIsWorking) {
+          // Server says nothing: ensure status is 'none' to clear stale 'pending'
+          updated.materialAccessStatus = (freshData.materialAccessStatus || 'none') as any;
+          updated.material_access_status = (freshData.material_access_status || 'none') as any;
         }
+
 
         await updateUser(updated);
         setUserInfo(updated);
@@ -277,29 +496,43 @@ export default function HomeScreen() {
         // -----------------------------------------------------------------------------
 
         const serverStatus = (freshUserData.materialAccessStatus || freshUserData.material_access_status || '').toLowerCase();
-
-        // --- ABSOLUTE GUARD EXPIRATION ---
-        const now = Date.now();
-        const guardAge = now - pendingTimestamp.current;
-        const isGuardExhausted = guardAge > 10000;
         const serverIsWorking = serverStatus === 'pending' || serverStatus === 'review' || serverStatus === 'approved';
 
-        if (localPending && (isGuardExhausted || serverIsWorking)) {
-          console.log('[Dashboard] Guard cleared. Server in control.');
-          setLocalPending(false);
+        // If server confirms pending/review/approved, clear local guard and trust server
+        if (localPendingRef.current && serverIsWorking) {
+          console.log('[Dashboard] Server confirmed pending/review. Clearing local guard.');
+          updateLocalPending(false);
           await SecureStore.deleteItemAsync('pending_proof_submitted');
           await SecureStore.deleteItemAsync('pending_proof_at');
+          await SecureStore.deleteItemAsync('pending_proof_user_id');
+        }
+
+        // Validate pending state belongs to current user
+        const storedPendingUserId = await SecureStore.getItemAsync('pending_proof_user_id');
+        const currentUserId = String(storedUser?.id || storedUser?.userId || '');
+        const isPendingForCurrentUser = localPendingRef.current && storedPendingUserId === currentUserId && currentUserId;
+
+        // Clear stale pending state if user ID doesn't match
+        if (localPendingRef.current && !isPendingForCurrentUser) {
+          console.log('[Dashboard] Clearing stale pending state - user mismatch');
+          updateLocalPending(false);
+          await SecureStore.deleteItemAsync('pending_proof_submitted');
+          await SecureStore.deleteItemAsync('pending_proof_at');
+          await SecureStore.deleteItemAsync('pending_proof_user_id');
         }
 
         const updatedUser = { ...userInfo, ...freshUserData };
-        if (localPending && !serverIsWorking && !isGuardExhausted) {
-          console.log('[Dashboard] Guarding: forcing PENDING');
+
+        // Only force pending if guard is active AND belongs to current user
+        if (isPendingForCurrentUser && !serverIsWorking) {
+          console.log('[Dashboard] Local guard active for current user: forcing PENDING');
           updatedUser.materialAccessStatus = 'pending' as any;
           updatedUser.material_access_status = 'pending' as any;
         } else if (!serverIsWorking) {
           updatedUser.materialAccessStatus = (freshUserData.materialAccessStatus || 'none') as any;
           updatedUser.material_access_status = (freshUserData.material_access_status || 'none') as any;
         }
+
 
         await updateUser(updatedUser);
         setUserInfo(updatedUser);
@@ -465,14 +698,51 @@ export default function HomeScreen() {
   }, [selectedLevelId, selectedSemester, allSubjects]);
 
   const onRefresh = async () => {
-    console.log('[Refresh] Manual refresh: Clearing local guards for instant sync');
-    setLocalPending(false);
-    pendingTimestamp.current = 0;
-    await SecureStore.deleteItemAsync('pending_proof_submitted');
-    await SecureStore.deleteItemAsync('pending_proof_at');
-
     setRefreshing(true);
-    fetchDashboardData();
+    await fetchDashboardData();
+    setRefreshing(false);
+  };
+
+  const handleStartTrial = async () => {
+    if (!userInfo?.id) {
+      showAlert({
+        title: 'Error',
+        message: 'User information not available. Please try logging in again.',
+        type: 'error'
+      });
+      return;
+    }
+
+    try {
+      const response = await api.post('/users/start-material-trial', {
+        userId: userInfo.id
+      });
+
+      // Backend returns message "Material trial started" on success
+      if (response.data.message && response.data.message.includes('trial started')) {
+        showAlert({
+          title: 'Trial Started!',
+          message: '15-minute trial activated. Enjoy full access to all materials!',
+          type: 'success'
+        });
+        // Refresh dashboard to get updated trial info
+        await fetchDashboardData();
+      } else {
+        showAlert({
+          title: 'Trial Failed',
+          message: response.data.message || 'Could not start trial. Please try again.',
+          type: 'error'
+        });
+      }
+    } catch (error: any) {
+      console.error('Start trial error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start trial';
+      showAlert({
+        title: 'Error',
+        message: errorMessage,
+        type: 'error'
+      });
+    }
   };
 
   const getSelectedLevelName = () => {
@@ -537,7 +807,25 @@ export default function HomeScreen() {
                   </View>
                 );
               }
-            })() : null}
+            })() : (
+              <TouchableOpacity
+                style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e3f2fd', padding: 8, borderRadius: 8, alignSelf: 'flex-start' }}
+                onPress={async () => {
+                  try {
+                    const userId = userInfo?.id || userInfo?.userId;
+                    await api.post('/users/start-material-trial', { userId });
+                    showAlert({ title: 'Success', message: 'Trial started! You have 15 minutes of free access.', type: 'success' });
+                    await fetchDashboardData();
+                  } catch (error: any) {
+                    console.log('[Start Trial] Error:', error.response?.data || error.message);
+                    showAlert({ title: 'Error', message: error.response?.data?.message || 'Failed to start trial. Please try again.', type: 'error' });
+                  }
+                }}
+              >
+                <Ionicons name="play-circle" size={16} color="#1976d2" />
+                <Text style={{ color: '#1976d2', fontWeight: 'bold', fontSize: 12 }}>Start Free Trial (15 min)</Text>
+              </TouchableOpacity>
+            )}
 
             {/* DEBUG TAG HIDDEN IN BACKGROUND AS REQUESTED */}
           </View>
@@ -735,85 +1023,148 @@ export default function HomeScreen() {
 
 
 
+  // Calculate isLocked for overlay display
+  let isLocked = !isGlobalFree;
+  if (isLocked && isPaidActive) {
+    isLocked = false; // Overridden by active payment
+  }
+
+  if (isLocked && trialStartStr) {
+    const trialEnd = new Date(trialStartStr).getTime() + (15 * 60 * 1000);
+    isLocked = new Date().getTime() >= trialEnd;
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
-      <FlatList
-        data={filteredSubjects}
-        extraData={`${JSON.stringify(userInfo)}-${localPending}`}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => {
-          let isLocked = !isGlobalFree;
-          if (isLocked && isPaidActive) {
-            isLocked = false; // Overridden by active payment
+
+      {/* Header is now outside FlatList */}
+      {renderHeader()}
+
+      {/* Wrap FlatList in container so overlay only covers subjects area */}
+      <View style={{ flex: 1, position: 'relative' }}>
+        <FlatList
+          data={filteredSubjects}
+          extraData={`${JSON.stringify(userInfo)}-${localPending}`}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item, index }) => {
+            const handlePress = (s: any) => {
+              if (isPending) {
+                showAlert({
+                  title: 'Review in Progress',
+                  message: 'Your payment proof has been submitted and is currently being reviewed by the admin. Please wait for approval.',
+                  type: 'info'
+                });
+                return;
+              }
+
+              if (isLocked) {
+                showAlert({
+                  title: 'Upgrade Required',
+                  message: 'Unlock full access to view notes and videos for this subject. Pay now with PesaPal or upload proof.',
+                  type: 'confirm',
+                  confirmText: 'Pay Now',
+                  cancelText: 'Cancel',
+                  onConfirm: () => setShowPaymentModal(true)
+                });
+                return;
+              }
+              router.push({ pathname: "/subject/[id]", params: { id: s.id, name: s.name } });
+            };
+
+            return (
+              <SubjectCard
+                subject={item}
+                index={index}
+                onPress={handlePress}
+              />
+            );
+          }}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-
-          if (isLocked && trialStartStr) {
-            const trialEnd = new Date(trialStartStr).getTime() + (15 * 60 * 1000);
-            isLocked = new Date().getTime() >= trialEnd;
-          }
-
-          const status = isPending ? 'pending' : (isLocked ? 'locked' : 'unlocked');
-
-          const handlePress = (s: any) => {
-            if (isPending) {
-              showAlert({
-                title: 'Review in Progress',
-                message: 'Your payment proof has been submitted and is currently being reviewed by the admin. Please wait for approval.',
-                type: 'info'
-              });
-              return;
-            }
-
-            if (isLocked) {
-              showAlert({
-                title: 'Upgrade Required',
-                message: 'Unlock full access to view notes and videos for this subject. Pay now with PesaPal or upload proof.',
-                type: 'confirm',
-                confirmText: 'Pay Now',
-                cancelText: 'Cancel',
-                onConfirm: () => setShowPaymentModal(true)
-              });
-              return;
-            }
-            router.push({ pathname: "/subject/[id]", params: { id: s.id, name: s.name } });
-          };
-
-          return (
-            <SubjectCard
-              subject={item}
-              index={index}
-              isLocked={isLocked}
-              status={isPending ? 'pending' : (isLocked ? 'locked' : 'unlocked')}
-              onPress={handlePress}
-            />
-          );
-        }}
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={{ padding: 40, alignItems: 'center' }}>
-              <ActivityIndicator size="large" color="#3498db" />
-              <Text style={{ marginTop: 10, color: '#bdc3c7' }}>Loading your subjects...</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                {allSubjects.length === 0 ? 'No subjects found.' : 'No subjects match your filter.'}
-              </Text>
-              {allSubjects.length > 0 && (
-                <Text style={{ fontSize: 12, color: '#ccc', marginTop: 10 }}>
-                  Try changing the semester.
+          ListEmptyComponent={
+            loading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#3498db" />
+                <Text style={{ marginTop: 10, color: '#bdc3c7' }}>Loading your subjects...</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  {allSubjects.length === 0 ? 'No subjects found.' : 'No subjects match your filter.'}
                 </Text>
+                {allSubjects.length > 0 && (
+                  <Text style={{ fontSize: 12, color: '#ccc', marginTop: 10 }}>
+                    Try changing the semester.
+                  </Text>
+                )}
+              </View>
+            )
+          }
+        />
+
+        {/* Unified Overlay for Pending State */}
+        {isPending && filteredSubjects.length > 0 && (
+          <View style={styles.unifiedOverlay}>
+            <View style={styles.overlayContent}>
+              <Ionicons name="hourglass-outline" size={48} color="#fbc02d" />
+              <Text style={styles.overlayTitle}>Payment Under Review</Text>
+              <Text style={styles.overlayMessage}>
+                Your payment proof has been submitted and is currently being reviewed by the admin. Please wait for approval.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Unified Overlay for Locked State */}
+        {!isPending && isLocked && filteredSubjects.length > 0 && (
+          <View style={styles.unifiedOverlay}>
+            <View style={styles.overlayContent}>
+              <Ionicons name="lock-closed" size={48} color="#d32f2f" />
+              <Text style={styles.overlayTitle}>Access Restricted</Text>
+              <Text style={styles.overlayMessage}>
+                Unlock full access to view notes and videos for all subjects.
+              </Text>
+
+              {/* Show Start Trial button only if user has never started trial */}
+              {!trialStartStr ? (
+                // Both buttons - show in row
+                <View style={styles.overlayButtonsContainer}>
+                  <TouchableOpacity
+                    style={[styles.overlayButton, styles.trialButton]}
+                    onPress={handleStartTrial}
+                  >
+                    <Ionicons name="time-outline" size={20} color="#fff" />
+                    <Text style={styles.overlayButtonText}>Start 15min Trial</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.overlayButton, styles.payButton]}
+                    onPress={() => setShowPaymentModal(true)}
+                  >
+                    <Ionicons name="card-outline" size={20} color="#fff" />
+                    <Text style={styles.overlayButtonText}>Pay Now</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // Only Pay Now button - center it
+                <View style={{ alignItems: 'center', width: '100%' }}>
+                  <TouchableOpacity
+                    style={[styles.overlayButton, styles.payButton]}
+                    onPress={() => setShowPaymentModal(true)}
+                  >
+                    <Ionicons name="card-outline" size={20} color="#fff" />
+                    <Text style={styles.overlayButtonText}>Pay Now</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
-          )
-        }
-      />
+          </View>
+        )}
+      </View>
+
       {renderModals()}
 
       {userInfo && (
@@ -826,22 +1177,25 @@ export default function HomeScreen() {
           isPending={isPending}
           onSuccess={async () => {
             setShowPaymentModal(false);
-            const now = Date.now();
-            setLocalPending(true);
-            pendingTimestamp.current = now;
+            updateLocalPending(true);
+            pendingTimestamp.current = Date.now();
+            const currentUserId = userInfo.id || userInfo.userId;
             await SecureStore.setItemAsync('pending_proof_submitted', 'true');
-            await SecureStore.setItemAsync('pending_proof_at', now.toString());
+            await SecureStore.setItemAsync('pending_proof_at', String(Date.now()));
+            await SecureStore.setItemAsync('pending_proof_user_id', String(currentUserId));
 
+
+            // Optimistically update userInfo to avoid visual flicker while fetchDashboardData runs
             if (userInfo) {
               const updated = {
                 ...userInfo,
                 materialAccessStatus: 'pending' as any,
                 material_access_status: 'pending' as any
               };
-              await updateUser(updated);
               setUserInfo(updated);
             }
-            setTimeout(onRefresh, 5000);
+
+            await fetchDashboardData();
           }}
         />
       )}
@@ -849,129 +1203,4 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  center: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 150, // Added to clear floating navigation
-  },
-  header: {
-    marginBottom: 10,
-  },
-  topRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20,
-  },
-  greeting: { fontSize: 13, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 0.5 },
-  bannerContainer: {
-    width: Dimensions.get('window').width - 32, // Full width minus padding
-    height: 180,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginRight: 0, // No margin right since we are centering/paging
-    backgroundColor: '#ddd',
-  },
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Dark overlay for readability
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  bannerTextContainer: {
-    marginBottom: 10,
-  },
-  bannerTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10
-  },
-  bannerDesc: {
-    color: '#f0f0f0',
-    fontSize: 14,
-    fontWeight: '500',
-    maxWidth: '85%',
-  },
-  bannerBtn: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: '#3498db',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  bannerBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  filterSection: { fontSize: 13, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 0.5 },
-  username: { fontSize: 20, fontWeight: '800', color: '#2c3e50' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  logoutButton: { padding: 8, backgroundColor: '#ffebee', borderRadius: 20 },
-  logoutIcon: { padding: 4 }, // Just icon for logout to save space
 
-  filtersRow: {
-    flexDirection: 'row', gap: 12, marginBottom: 24,
-  },
-  dropdownBtn: {
-    flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', padding: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: '#ecf0f1',
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1,
-  },
-  dropdownLabel: { fontSize: 10, color: '#bdc3c7', fontWeight: 'bold', textTransform: 'uppercase' },
-  dropdownValue: { fontSize: 14, color: '#34495e', fontWeight: '600', marginTop: 2 },
-
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
-  badge: { fontSize: 12, color: '#7f8c8d', backgroundColor: '#ecf0f1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-
-  emptyState: { alignItems: 'center', marginTop: 40 },
-  emptyText: { color: '#95a5a6' },
-
-  // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 20, maxHeight: 400 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f2f6',
-    minHeight: 50, // Ensure enough height for wrapped text
-  },
-  modalOptionActive: { backgroundColor: '#f0f9ff', paddingHorizontal: 10, borderRadius: 8, borderBottomWidth: 0 },
-  optionText: {
-    fontSize: 16,
-    color: '#2c3e50',
-    flex: 1, // Allow text to take available space
-    flexWrap: 'wrap', // Enable text wrapping
-    marginRight: 10, // Space before checkmark
-  },
-  optionTextActive: { color: '#3498db', fontWeight: '600' },
-});

@@ -170,6 +170,7 @@ export default function PaymentModal({ visible, onClose, userId, userName, userE
     const handleClose = () => {
         setStep('plan');
         setPaymentUrl(null);
+        setScreenshot(null);
         onClose();
     };
 
