@@ -28,13 +28,12 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)'; // Check if in (tabs) group
+    const inAuthGroup = segments[0] === '(tabs)';
 
-    // If not logged in and try to access main app, redirect to login
     if (!userToken && inAuthGroup) {
+      // Redirect but also don't set appIsReady yet (handled in other useEffect)
       router.replace('/login');
     }
-    // If logged in and at login page, redirect to home
     else if (userToken && segments[0] === 'login') {
       router.replace('/(tabs)');
     }

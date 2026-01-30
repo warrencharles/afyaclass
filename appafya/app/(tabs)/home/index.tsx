@@ -24,27 +24,28 @@ const styles = StyleSheet.create({
     flex: 1, justifyContent: 'center', alignItems: 'center',
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 150, // Added to clear floating navigation
+    paddingHorizontal: 20,
+    paddingBottom: 150,
   },
   header: {
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingHorizontal: 20,
+    paddingTop: 15,
   },
   topRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15,
   },
-  greeting: { fontSize: 13, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 0.5 },
-  username: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50', marginTop: 2 },
+  greeting: { fontSize: 12, color: '#95a5a6', textTransform: 'uppercase', letterSpacing: 1 },
+  username: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50', marginTop: 0 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   logoutButton: { padding: 8, backgroundColor: '#ffebee', borderRadius: 20 },
 
   bannerContainer: {
-    width: Dimensions.get('window').width - 32, // Full width minus padding
-    height: 180,
-    borderRadius: 12,
+    width: Dimensions.get('window').width - 40, // Full width minus screen padding (20 left + 20 right)
+    height: 190,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginRight: 0, // No margin right since we are centering/paging
-    backgroundColor: '#ddd',
+    backgroundColor: '#fff',
   },
   bannerImage: {
     width: '100%',
@@ -52,60 +53,61 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Dark overlay for readability
+    backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'flex-end',
-    padding: 16,
+    padding: 20,
   },
   bannerTextContainer: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   bannerTitle: {
     color: '#fff',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3
   },
   bannerDesc: {
     color: '#fff',
     fontSize: 14,
-    opacity: 0.9,
+    opacity: 0.95,
     fontWeight: '500',
+    lineHeight: 20,
   },
   bannerBtn: {
     alignSelf: 'flex-start',
     backgroundColor: '#3498db',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   bannerBtnText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
+    fontWeight: '700',
+    fontSize: 13,
   },
 
-  logoutIcon: { padding: 4 }, // Just icon for logout to save space
+  logoutIcon: { padding: 4 },
 
   filtersRow: {
-    flexDirection: 'row', gap: 12, marginBottom: 24,
+    flexDirection: 'row', gap: 12, marginBottom: 20,
   },
   dropdownBtn: {
     flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', padding: 12, borderRadius: 12,
+    backgroundColor: '#fff', padding: 14, borderRadius: 14,
     borderWidth: 1, borderColor: '#ecf0f1',
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
   },
   dropdownLabel: { fontSize: 10, color: '#bdc3c7', fontWeight: 'bold', textTransform: 'uppercase' },
-  dropdownValue: { fontSize: 14, color: '#34495e', fontWeight: '600', marginTop: 2 },
+  dropdownValue: { fontSize: 14, color: '#34495e', fontWeight: '700', marginTop: 2 },
 
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#2c3e50' },
   badge: { fontSize: 12, color: '#7f8c8d', backgroundColor: '#ecf0f1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
 
   emptyState: { alignItems: 'center', marginTop: 40 },
@@ -256,7 +258,7 @@ export default function HomeScreen() {
 
   // Carousel State
   const flatListRef = React.useRef<FlatList>(null);
-  const scrollIndex = React.useRef(0);
+  const [activeIndex, setActiveIndex] = useState(0);
   const screenWidth = Dimensions.get('window').width;
 
   // Load persistence on mount
@@ -290,15 +292,16 @@ export default function HomeScreen() {
     let interval: any;
     if (banners.length > 0) {
       interval = setInterval(() => {
-        scrollIndex.current = (scrollIndex.current + 1) % banners.length;
+        const nextIndex = (activeIndex + 1) % banners.length;
         flatListRef.current?.scrollToIndex({
-          index: scrollIndex.current,
+          index: nextIndex,
           animated: true,
         });
-      }, 5000); // Scroll every 5 seconds
+        setActiveIndex(nextIndex);
+      }, 5000);
     }
     return () => clearInterval(interval);
-  }, [banners]);
+  }, [banners, screenWidth, activeIndex]);
 
   // --- Real-time Polling for Global Access ---
   const prevIsGlobalFreeAccess = React.useRef<boolean | undefined>(
@@ -757,9 +760,11 @@ export default function HomeScreen() {
       <View style={styles.header}>
         {/* Top Bar: Greeting + Forum/Logout */}
         <View style={styles.topRow}>
-          <View>
+          <View style={{ flex: 1, marginRight: 10 }}>
             <Text style={styles.greeting}>Habari,</Text>
-            <Text style={styles.username}>{userInfo?.full_name || userInfo?.name || userInfo?.username || 'Guest'}</Text>
+            <Text style={styles.username} numberOfLines={1}>
+              {userInfo?.full_name || userInfo?.name || userInfo?.username || 'Guest'}
+            </Text>
 
             {/* ACCESS STATUS INDICATORS */}
             {isGlobalFree ? (
@@ -851,73 +856,83 @@ export default function HomeScreen() {
         {/* Banner Carousel */}
         {
           banners.length > 0 && (
-            <View>
-              <FlatList
-                ref={flatListRef}
-                horizontal
-                data={banners}
-                keyExtractor={(item) => item.id.toString()}
-                showsHorizontalScrollIndicator={false}
-                pagingEnabled
-                scrollEnabled
-                snapToAlignment="center"
-                scrollEventThrottle={16}
-                decelerationRate="fast"
-                contentContainerStyle={{ marginVertical: 10 }}
-                onScrollToIndexFailed={info => {
-                  const wait = new Promise(resolve => setTimeout(resolve, 500));
-                  wait.then(() => {
-                    flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
-                  });
-                }}
-                renderItem={({ item }) => {
-                  // Mapped from Website API Inspection:
-                  // Title -> title
-                  // Desc -> description
-                  // Link -> targetUrl (or link)
-                  // CTA Text -> Not in API, Website defaults to "Learn More"
+            <View style={{ marginBottom: 20, paddingHorizontal: 20 }}>
+              <View style={{
+                borderRadius: 16,
+                overflow: 'hidden', // This is the "boarder" that clips traces
+                backgroundColor: '#fff',
+                elevation: 5,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+              }}>
+                <FlatList
+                  ref={flatListRef}
+                  horizontal
+                  data={banners}
+                  keyExtractor={(item) => item.id.toString()}
+                  showsHorizontalScrollIndicator={false}
+                  pagingEnabled={true}
+                  scrollEnabled
+                  onMomentumScrollEnd={(event) => {
+                    const index = Math.round(event.nativeEvent.contentOffset.x / (screenWidth - 40));
+                    setActiveIndex(index);
+                  }}
+                  renderItem={({ item }) => {
+                    const title = item.title || item.name || item.heading || item.caption;
+                    const desc = item.description || item.content || item.subtitle;
+                    const rawLink = item.targetUrl || item.link;
 
-                  const title = item.title || item.name || item.heading || item.caption;
-                  const desc = item.description || item.content || item.subtitle;
-                  const rawLink = item.targetUrl || item.link; // Correct API key is targetUrl
+                    const openLink = (url?: string) => {
+                      if (!url) return;
+                      const finalUrl = (url.startsWith('http://') || url.startsWith('https://'))
+                        ? url
+                        : `https://${url}`;
 
-                  // Helper to ensure URL has scheme
-                  const openLink = (url?: string) => {
-                    if (!url) return;
-                    // Prepend https:// if missing http/https
-                    const finalUrl = (url.startsWith('http://') || url.startsWith('https://'))
-                      ? url
-                      : `https://${url}`;
+                      Linking.openURL(finalUrl).catch(err => console.error("Couldn't load page", err));
+                    };
 
-                    Linking.openURL(finalUrl).catch(err => console.error("Couldn't load page", err));
-                  };
+                    const cta = item.ctaText || item.cta_text || item.button_text || 'Learn More';
 
-                  // We use "Learn More" because the website does so. This is UI text, not mock data.
-                  const cta = item.ctaText || item.cta_text || item.button_text || 'Learn More';
-
-                  return (
-                    <View style={[styles.bannerContainer, { width: screenWidth - 32 }]}>
-                      <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
-                      <View style={styles.bannerOverlay}>
-                        <View style={styles.bannerTextContainer}>
-                          {title && <Text style={styles.bannerTitle} numberOfLines={1}>{title}</Text>}
-                          {desc && <Text style={styles.bannerDesc} numberOfLines={2}>{desc}</Text>}
+                    return (
+                      <View style={styles.bannerContainer}>
+                        <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+                        <View style={styles.bannerOverlay}>
+                          <View style={styles.bannerTextContainer}>
+                            {title && <Text style={styles.bannerTitle} numberOfLines={1}>{title}</Text>}
+                            {desc && <Text style={styles.bannerDesc} numberOfLines={2}>{desc}</Text>}
+                            {rawLink && (
+                              <TouchableOpacity
+                                style={styles.bannerBtn}
+                                activeOpacity={0.8}
+                                onPress={() => openLink(rawLink)}
+                              >
+                                <Text style={styles.bannerBtnText}>{cta}</Text>
+                                <Ionicons name="arrow-forward" size={12} color="#fff" />
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         </View>
-                        {rawLink && (
-                          <TouchableOpacity
-                            style={styles.bannerBtn}
-                            activeOpacity={0.8}
-                            onPress={() => openLink(rawLink)}
-                          >
-                            <Text style={styles.bannerBtnText}>{cta}</Text>
-                            <Ionicons name="arrow-forward" size={12} color="#fff" />
-                          </TouchableOpacity>
-                        )}
                       </View>
-                    </View>
-                  )
-                }}
-              />
+                    )
+                  }}
+                />
+              </View>
+              {/* Pagination Dots */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 10, gap: 5 }}>
+                {banners.map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: activeIndex === i ? '#3498db' : '#dcdde1'
+                    }}
+                  />
+                ))}
+              </View>
             </View>
           )
         }

@@ -1,8 +1,9 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -44,6 +45,15 @@ function TabIcon({ name, color, focused }: { name: any, color: string, focused: 
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { userToken, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: '#fff' }} />;
+  }
+
+  if (!userToken) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Tabs
