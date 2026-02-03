@@ -4,7 +4,7 @@ import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import {
   BookOpen, ArrowRight, Stethoscope,
-  Shield, Play, Globe, CheckCircle, Smartphone
+  Shield, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -92,7 +92,7 @@ export const HomePage: React.FC = () => {
             {[
               { icon: BookOpen, title: 'Curated Library', desc: 'Verified notes specific to your NACTVET level.', color: 'text-blue-600' },
               { icon: Shield, title: 'Exam Prep', desc: 'Past papers and structured guides.', color: 'text-purple-600' },
-              { icon: Smartphone, title: 'Anytime Access', desc: 'Study 24/7 on any device.', color: 'text-pink-600' },
+              { icon: CheckCircle, title: 'Anytime Access', desc: 'Study 24/7 on any device.', color: 'text-pink-600' },
             ].map((f, i) => (
               <div key={i} className="neu-flat p-8 flex flex-col items-center text-center neu-tilt group cursor-default">
                 <div className={`w-20 h-20 neu-concave rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
